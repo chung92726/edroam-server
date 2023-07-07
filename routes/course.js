@@ -27,6 +27,10 @@ import {
   studentCount,
   getHistory,
   getSignedUrl,
+  uploadSupplementary,
+  removeSupplementary,
+  removeupdateSupplementary,
+  getS3File,
 } from '../controllers/course'
 
 const router = express.Router()
@@ -110,5 +114,26 @@ router.post(
 router.post('/course/get-signedurl', getSignedUrl)
 
 router.get('/user/enrollment-history', requireSignin, getHistory)
+
+router.post(
+  '/course/supplementary-upload/:instructorId',
+  requireSignin,
+  formidable(),
+  uploadSupplementary
+)
+
+router.post(
+  '/course/supplementary-remove/:instructorId',
+  requireSignin,
+  removeSupplementary
+)
+
+router.post(
+  '/course/supplementary-update-remove/:instructorId/:lessonId',
+  requireSignin,
+  removeupdateSupplementary
+)
+
+router.get('/course/supplementary-download/:fileId', requireSignin, getS3File)
 
 module.exports = router
