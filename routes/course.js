@@ -31,6 +31,7 @@ import {
   removeSupplementary,
   removeupdateSupplementary,
   getS3File,
+  category,
 } from "../controllers/course";
 
 const router = express.Router();
