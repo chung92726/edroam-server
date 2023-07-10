@@ -16,6 +16,11 @@ const app = express()
 // connect do db
 mongoose
   .connect(process.env.DATABASE)
+  //   {
+  //   authSource: 'admin',
+  //   user: 'Frankie',
+  //   pass: process.env.DB_PASSWORD,
+  // })
   .then((e) => console.log('DB connected'))
   .catch((err) => console.log('DB CONNECTION ERROR: '))
 

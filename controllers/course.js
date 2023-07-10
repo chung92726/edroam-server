@@ -7,6 +7,7 @@ import User from "../models/user";
 import Completed from "../models/completed";
 import Enrolled from "../models/enrolled";
 import getSignedFileUrl from "../utils/signedUrl";
+import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 const stripe = require("stripe")(process.env.STRIPE_SECRET);
 
@@ -16,6 +17,7 @@ const awsConfig = {
   region: process.env.AWS_REGION,
   apiVersion: process.env.AWS_API_VERSION,
 };
+const client = new S3Client({});
 
 const S3 = new AWS.S3(awsConfig);
 
@@ -99,7 +101,7 @@ export const read = async (req, res) => {
   console.log("course");
   try {
     const course = await Course.findOne({ slug: req.params.slug })
-      .populate("instructor", "_id name")
+      .populate("instructor", "_id name picture biography")
       .exec();
     res.json(course);
   } catch (err) {
@@ -166,7 +168,8 @@ export const removeVideo = async (req, res) => {
 export const addLesson = async (req, res) => {
   try {
     const { slug, instructorId } = req.params;
-    const { title, content, video, free_preview } = req.body;
+    const { title, content, video, free_preview, supplementary_resources } =
+      req.body;
     if (req.auth._id !== instructorId) {
       return res.status(400).send("Unauthorized");
     }
@@ -180,6 +183,7 @@ export const addLesson = async (req, res) => {
             video,
             free_preview,
             slug: slugify(title),
+            supplementary_resources,
           },
         },
       },
@@ -239,7 +243,14 @@ export const updateLesson = async (req, res) => {
     if (req.auth._id !== course.instructor._id.toString()) {
       return res.status(400).send("Unauthorized");
     }
-    const { title, content, video, free_preview, _id } = req.body;
+    const {
+      title,
+      content,
+      video,
+      free_preview,
+      _id,
+      supplementary_resources,
+    } = req.body;
     const updated = await Course.updateOne(
       { "lessons._id": _id },
       {
@@ -248,6 +259,7 @@ export const updateLesson = async (req, res) => {
           "lessons.$.content": content,
           "lessons.$.video": video,
           "lessons.$.free_preview": free_preview,
+          "lessons.$.supplementary_resources": supplementary_resources,
         },
       },
       { new: true }
@@ -367,6 +379,9 @@ export const freeEnrollment = async (req, res) => {
       instructor: course.instructor,
       price: course.price,
     }).save();
+    const updated = await Course.findByIdAndUpdate(courseId, {
+      $addToSet: { EnrolledUser: req.auth._id },
+    });
     res.json({
       message: "Congratulations! You have successfully enrolled",
       course: course,
@@ -455,6 +470,11 @@ export const stripeSuccess = async (req, res) => {
         instructor: course.instructor,
         price: course.price,
       }).save();
+      const updated = await Course.findByIdAndUpdate(course._id, {
+        $addToSet: { EnrolledUser: req.auth._id },
+        // add TotalRevenue
+        $inc: { TotalRevenue: course.price },
+      });
     }
     res.json({ success: true, course: course });
   } catch (err) {
@@ -592,5 +612,116 @@ export const getSignedUrl = async (req, res) => {
   } catch (err) {
     console.log(err);
     return res.status(400).send("Get signed url failed");
+  }
+};
+
+export const uploadSupplementary = async (req, res) => {
+  try {
+    if (req.auth._id !== req.params.instructorId) {
+      return res.status(400).send("Unauthorized");
+    }
+    const { supplementary } = req.files;
+    console.log(supplementary);
+
+    if (!supplementary) return res.status(400).send("No video");
+    const uid = new ShortUniqueId({ length: 18 });
+    const params = {
+      Bucket: "devroad-bucket",
+      Key: `${uid()}.${supplementary.type.split("/")[1]}`, // type is video/mp4
+      Body: fs.readFileSync(supplementary.path),
+      ACL: "public-read",
+      ContentType: supplementary.type,
+    };
+    // upload to S3
+    S3.upload(params, (err, data) => {
+      if (err) {
+        console.log(err);
+        return res.sendStatus(400);
+      }
+      console.log("AWS UPLOAD RES DATA", data);
+      res.send(data);
+    });
+  } catch (err) {
+    console.log(err);
+    return res.status(400).send("Error. Try again.");
+  }
+};
+
+export const removeSupplementary = async (req, res) => {
+  try {
+    if (req.auth._id !== req.params.instructorId) {
+      return res.status(400).send("Unauthorized");
+    }
+    const { Bucket, Key } = req.body;
+    // upload to S3
+    S3.deleteObject({ Bucket, Key }, (err, data) => {
+      if (err) {
+        console.log(err);
+        return res.sendStatus(400);
+      }
+      console.log("AWS DELETE RES DATA", data);
+      res.send({ ok: true });
+    });
+  } catch (err) {
+    console.log(err);
+    return res.status(400).send("Error. Try again.");
+  }
+};
+
+export const removeupdateSupplementary = async (req, res) => {
+  try {
+    const { instructorId, slug, lessonId } = req.params;
+    if (req.auth._id !== instructorId) {
+      return res.status(400).send("Unauthorized");
+    }
+    const { Bucket, Key } = req.body;
+    // upload to S3
+    S3.deleteObject({ Bucket, Key }, (err, data) => {
+      if (err) {
+        console.log(err);
+        return res.sendStatus(400);
+      }
+      console.log("AWS DELETE RES DATA", data);
+    });
+    // remove file from db
+    const updated = await Course.updateOne(
+      { "lessons._id": lessonId },
+      {
+        // pull the supplementaryresourse from the lesson
+        $pull: { "lessons.$.supplementaryResources": { Key } },
+      },
+      { new: true }
+    )
+      .populate("instructor", "_id name")
+      .exec();
+
+    res.send({ ok: true });
+  } catch (err) {
+    console.log(err);
+    return res.status(400).send("Error. Try again.");
+  }
+};
+
+export const getS3File = async (req, res) => {
+  try {
+    const { fileId } = req.params;
+    const client = new S3Client({
+      region: "ap-northeast-1",
+      // credentials: {
+      //   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+      //   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      // },
+    });
+    console.log(fileId);
+    const params = {
+      Bucket: "devroad-bucket",
+      Key: fileId,
+    };
+    const command = new GetObjectCommand(params);
+    const data = await client.send(command);
+
+    data.Body.pipe(res);
+  } catch (err) {
+    console.log(err);
   }
 };
