@@ -1,6 +1,6 @@
-import mongoose from 'mongoose'
-const { Schema } = mongoose
-const { ObjectId } = mongoose.Schema
+import mongoose from "mongoose";
+const { Schema } = mongoose;
+const { ObjectId } = mongoose.Schema;
 
 const lessonSchema = new Schema(
   {
@@ -26,7 +26,7 @@ const lessonSchema = new Schema(
     },
   },
   { timestamps: true }
-)
+);
 
 const courseSchema = new Schema(
   {
@@ -51,7 +51,17 @@ const courseSchema = new Schema(
       default: 9.99,
     },
     image: {},
-    category: String,
+    category: [],
+    level: {
+      type: String,
+      enum: ["All Levels", "Beginner", "Intermediate", "Expert"],
+      default: "All Levels",
+    },
+    language: {
+      type: String,
+      enum: ["English", "Chinese"],
+      default: "English",
+    },
     published: {
       type: Boolean,
       default: false,
@@ -62,12 +72,12 @@ const courseSchema = new Schema(
     },
     instructor: {
       type: ObjectId,
-      ref: 'User',
+      ref: "User",
       required: true,
     },
     lessons: [lessonSchema],
   },
   { timestamps: true }
-)
+);
 
-export default mongoose.model('Course', courseSchema)
+export default mongoose.model("Course", courseSchema);
