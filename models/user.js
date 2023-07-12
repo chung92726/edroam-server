@@ -1,6 +1,6 @@
-import mongoose from "mongoose";
-const { Schema } = mongoose;
-const { ObjectId } = mongoose.Schema;
+import mongoose from 'mongoose'
+const { Schema } = mongoose
+const { ObjectId } = mongoose.Schema
 
 const userSchema = new Schema(
   {
@@ -15,6 +15,14 @@ const userSchema = new Schema(
       required: true,
       unique: true,
     },
+    tokenVersion: {
+      type: Number,
+      default: 0,
+    },
+    banned: {
+      type: Boolean,
+      default: false,
+    },
     password: {
       type: String,
       required: true,
@@ -28,8 +36,8 @@ const userSchema = new Schema(
     picture: {},
     role: {
       type: [String],
-      default: ["Subscriber"],
-      enum: ["Subscriber", "Instructor", "Admin"],
+      default: ['Subscriber'],
+      enum: ['Subscriber', 'Instructor', 'Admin'],
     },
     website: {
       type: String,
@@ -38,16 +46,16 @@ const userSchema = new Schema(
       type: String,
     },
 
-    stripe_account_id: "",
+    stripe_account_id: '',
     stripe_seller: {},
     stripeSession: {},
     passwordResetCode: {
       data: String,
-      default: "",
+      default: '',
     },
-    courses: [{ type: ObjectId, ref: "Course" }],
+    courses: [{ type: ObjectId, ref: 'Course' }],
   },
   { timestamps: true }
-);
+)
 
-export default mongoose.model("User", userSchema);
+export default mongoose.model('User', userSchema)

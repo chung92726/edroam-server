@@ -39,3 +39,16 @@ export const isEnrolled = async (req, res, next) => {
     console.log(err)
   }
 }
+
+export const isAdmin = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.auth._id).exec()
+    if (!user.role.includes('Admin')) {
+      return res.sendStatus(403)
+    } else {
+      next()
+    }
+  } catch (err) {
+    console.log(err)
+  }
+}
