@@ -15,6 +15,7 @@ const answerSchema = new Schema({
   explanation: {
     type: String,
     trim: true,
+    maxlength: 1000,
   },
 })
 
@@ -30,10 +31,6 @@ const questionSchema = new Schema({
   answers: {
     type: [answerSchema],
     validate: [arrayLimit, 'Answers must be between 2 and 8.'],
-  },
-  overallExplanation: {
-    type: String,
-    trim: true,
   },
 })
 
@@ -60,6 +57,10 @@ const quizSchema = new Schema(
       default: 0,
       min: 0,
       max: 100,
+    },
+    published: {
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true }
