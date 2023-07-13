@@ -38,7 +38,7 @@ async function facebookCallback(accessToken, refreshToken, profile, done) {
 async function googleCallback(accessToken, refreshToken, profile, done) {
   try {
     const user = await User.findOne({ email: profile.emails[0].value }).exec()
-
+    console.log(profile)
     if (user) {
       // User already exists, log them in
       done(null, user)
@@ -77,7 +77,7 @@ passport.use(
       clientID: process.env.FACEBOOK_CLIENT_ID,
       clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
       callbackURL: process.env.FACEBOOK_CALLBACK_URL,
-      profileFields: ['id', 'displayName', 'email'],
+      profileFields: ['id', 'displayName', 'email', 'picture.type(large)'],
     },
     facebookCallback
   )

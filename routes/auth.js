@@ -1,4 +1,4 @@
-import express from "express"
+import express from 'express'
 import {
   register,
   login,
@@ -9,39 +9,41 @@ import {
   changePassword,
   loginWithFacebook,
   loginWithGoogle,
-} from "../controllers/auth"
-import { requireSignin } from "../middlewares/index"
-import passport from "../passport"
-const jwt = require("jsonwebtoken")
+} from '../controllers/auth'
+import { requireSignin } from '../middlewares/index'
+import passport from '../passport'
+const jwt = require('jsonwebtoken')
 
 const router = express.Router()
 
-router.post("/register", register)
-router.post("/login", login)
-router.get("/logout", logout)
-router.get("/current-user", requireSignin, currentUser)
-router.post("/forgot-password", forgotPassword)
-router.post("/reset-password", resetPassword)
-router.post("/user/change-password", requireSignin, changePassword)
+router.post('/register', register)
+router.post('/login', login)
+router.get('/logout', logout)
+router.get('/current-user', requireSignin, currentUser)
+router.post('/forgot-password', forgotPassword)
+router.post('/reset-password', resetPassword)
+router.post('/user/change-password', requireSignin, changePassword)
 
 router.get(
-  "/auth/facebook",
+  '/auth/facebook',
 
-  passport.authenticate("facebook", { scope: ["email"] })
+  passport.authenticate('facebook', {
+    scope: ['email', 'public_profile', 'user_link'],
+  })
 )
 router.get(
-  "/auth/facebook/callback",
-  passport.authenticate("facebook"),
+  '/auth/facebook/callback',
+  passport.authenticate('facebook'),
   loginWithFacebook
 )
 
 router.get(
-  "/auth/google",
-  passport.authenticate("google", { scope: ["profile", "email"] })
+  '/auth/google',
+  passport.authenticate('google', { scope: ['profile', 'email'] })
 )
 router.get(
-  "/auth/google/callback",
-  passport.authenticate("google"),
+  '/auth/google/callback',
+  passport.authenticate('google'),
   loginWithGoogle
 )
 
