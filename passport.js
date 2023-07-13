@@ -22,6 +22,7 @@ async function facebookCallback(accessToken, refreshToken, profile, done) {
         email: profile._json.email,
         password: await hashPassword(generateRandomPassword()),
         provider: 'facebook',
+        'picture.Location': profile.photos[0].value,
         providerId: profile.id,
       })
 
@@ -48,6 +49,7 @@ async function googleCallback(accessToken, refreshToken, profile, done) {
         email: profile.emails[0].value,
         password: await hashPassword(generateRandomPassword()),
         provider: 'google',
+        'picture.Location': profile.photos[0].value,
         providerId: profile.id,
       })
 

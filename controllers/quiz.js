@@ -1,4 +1,5 @@
 import Quiz from '../models/quiz'
+import StudentResponse from '../models/quizResponse'
 
 export const createQuiz = async (req, res) => {
   try {
@@ -165,6 +166,102 @@ export const addReservedQuestion = async (req, res) => {
     await quiz.save()
 
     res.status(201).json({ message: 'Question reserved' })
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+}
+
+export const deleteAnswer = async (req, res) => {
+  try {
+    const quiz = await Quiz.findById(req.params.quizId)
+    if (!quiz) {
+      return res.status(404).json({ error: 'Quiz not found' })
+    }
+
+    const questionIndex = quiz.questions.findIndex(
+      (question) => question._id.toString() === req.params.questionId
+    )
+
+    if (questionIndex === -1) {
+      return res.status(404).json({ error: 'Question not found' })
+    }
+
+    const answerIndex = quiz.questions[questionIndex].answers.findIndex(
+      (answer) => answer._id.toString() === req.params.answerId
+    )
+
+    if (answerIndex === -1) {
+      return res.status(404).json({ error: 'Answer not found' })
+    }
+
+    quiz.questions[questionIndex].answers.splice(answerIndex, 1)
+    await quiz.save()
+
+    res.status(200).json({ message: 'Answer deleted' })
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+}
+
+export const addAnswer = async (req, res) => {
+  try {
+    const quiz = await Quiz.findById(req.params.quizId)
+    if (!quiz) {
+      return res.status(404).json({ error: 'Quiz not found' })
+    }
+
+    const questionIndex = quiz.questions.findIndex(
+      (question) => question._id.toString() === req.params.questionId
+    )
+
+    if (questionIndex === -1) {
+      return res.status(404).json({ error: 'Question not found' })
+    }
+
+    quiz.questions[questionIndex].answers.push(req.body)
+    await quiz.save()
+
+    res.status(201).json({ message: 'Answer added', answer: req.body })
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+}
+
+export const submitQuiz = async (req, res) => {
+  try {
+    const quiz = await Quiz.findById(req.body.quizId)
+    if (!quiz) {
+      return res.status(404).json({ error: 'Quiz not found' })
+    }
+
+    const studentResponse = new StudentResponse({
+      quizId: req.body.quizId,
+      studentName: req.body.studentName,
+      answers: req.body.answers,
+    })
+
+    let correctAnswers = 0
+    studentResponse.answers.forEach((answer) => {
+      const question = quiz.questions.id(answer.questionId)
+      if (question) {
+        const isCorrect = answer.selectedAnswers.every(
+          (selectedAnswerIndex, i) => {
+            return question.answers[selectedAnswerIndex].isCorrect
+          }
+        )
+
+        if (isCorrect) {
+          correctAnswers++
+        }
+      }
+    })
+
+    studentResponse.score = (correctAnswers / quiz.questions.length) * 100
+    await studentResponse.save()
+
+    res
+      .status(201)
+      .json({ message: 'Quiz submitted', score: studentResponse.score })
   } catch (error) {
     res.status(400).json({ error: error.message })
   }
