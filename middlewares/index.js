@@ -1,12 +1,38 @@
 import { expressjwt } from 'express-jwt'
 import User from '../models/user'
 import Course from '../models/course'
+import passport from '../passport'
 
-export const requireSignin = expressjwt({
-  getToken: (req, res) => req.cookies.token,
-  secret: process.env.JWT_SECRET,
-  algorithms: ['HS256'],
-})
+export const requireSignin = (req, res, next) => {
+  if (req.cookies.token) {
+    expressjwt({
+      getToken: (req) => req.cookies.token,
+      secret: process.env.JWT_SECRET,
+      algorithms: ['HS256'],
+    })(req, res, async (err) => {
+      if (err) {
+        return res.status(401).json({ error: 'Unauthorized' })
+      }
+
+      // Retrieve the user from the database
+      const user = await User.findById(req.auth._id)
+
+      if (!user) {
+        return res.status(401).json({ error: 'Unauthorized' })
+      }
+
+      // Check if the token version is valid
+      if (req.auth.tokenVersion !== user.tokenVersion) {
+        return res.status(401).json({ error: 'Unauthorized' })
+      }
+
+      // If everything is fine, proceed to the next middleware
+      next()
+    })
+  } else {
+    return res.status(401).json({ error: 'Unauthorized' })
+  }
+}
 
 export const isInstructor = async (req, res, next) => {
   try {

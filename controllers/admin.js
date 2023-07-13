@@ -245,7 +245,10 @@ export const banUser = async (req, res) => {
     // Update user's banned status to true and increment tokenVersion
     const user = await User.findByIdAndUpdate(
       userId,
-      { $set: { banned: true } },
+      {
+        $set: { banned: true },
+        $inc: { tokenVersion: 1 },
+      },
       { new: true }
     ).exec()
 
@@ -261,9 +264,14 @@ export const unBanUser = async (req, res) => {
     const { userId } = req.params
     const user = await User.findByIdAndUpdate(
       userId,
-      { $set: { banned: false } },
+      {
+        $set: { banned: false },
+        $inc: { tokenVersion: 1 },
+      },
       { new: true }
     )
+
+    res.json({ message: 'User unbanned successfully', user })
   } catch (err) {
     console.log(err)
     res.status(400).send('Unban user failed. Try again.')
