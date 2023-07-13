@@ -1,6 +1,6 @@
-import mongoose from "mongoose";
-const { Schema } = mongoose;
-const { ObjectId } = mongoose.Schema;
+import mongoose from "mongoose"
+const { Schema } = mongoose
+const { ObjectId } = mongoose.Schema
 
 const userSchema = new Schema(
   {
@@ -29,12 +29,27 @@ const userSchema = new Schema(
     role: {
       type: [String],
       default: ["Subscriber"],
-      enum: ["Subscriber", "Instructor", "Admin"],
+      enum: ["Subscriber", "Instructor", "Admin", "Pending"],
     },
     website: {
       type: String,
     },
     biography: {
+      type: String,
+    },
+    ageRange: {
+      type: String,
+    },
+    phoneNumber: {
+      type: String,
+    },
+    gender: {
+      type: String,
+    },
+    courseDetails: {
+      type: String,
+    },
+    teachingExperience: {
       type: String,
     },
 
@@ -48,6 +63,6 @@ const userSchema = new Schema(
     courses: [{ type: ObjectId, ref: "Course" }],
   },
   { timestamps: true }
-);
+)
 
-export default mongoose.model("User", userSchema);
+export default mongoose.model("User", userSchema)
