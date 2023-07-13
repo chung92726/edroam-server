@@ -52,12 +52,22 @@ export const login = async (req, res) => {
     const user = await User.findOne({ email }).exec()
     if (!user) return res.status(400).send("Wrong username or password")
     // check password
+    if (user.banned) {
+      return res
+        .status(403)
+        .send("Your are banned.")
+        .redirect("http://localhost:3000")
+    }
     const match = await comparePassword(password, user.password)
     if (!match) return res.status(400).send("Wrong username or password")
     // create signed jwt
-    const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
-    })
+    const token = jwt.sign(
+      { _id: user._id, tokenVersion: user.tokenVersion },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "7d",
+      }
+    )
     // return user and token to client, exclude hashed password
     user.password = undefined
     // send token in cookie
@@ -76,6 +86,9 @@ export const login = async (req, res) => {
 export const logout = async (req, res) => {
   try {
     res.clearCookie("token")
+    if (req.session) {
+      req.session.destroy()
+    }
     return res.json({ message: "Signout success" })
   } catch (err) {
     return res.status(400).send("Error. Try again.")
@@ -212,5 +225,61 @@ export const changePassword = async (req, res) => {
   } catch (err) {
     console.log(err)
     return res.status(400).send("Error. Try again.")
+  }
+}
+
+export const loginWithFacebook = async (req, res) => {
+  {
+    const user = await User.findById(req.user._id).select("-password").exec()
+    if (user.banned) {
+      return res
+        .status(403)
+        .send("Your are banned.")
+        .redirect("http://localhost:3000")
+    }
+    const token = jwt.sign(
+      { _id: req.user._id, tokenVersion: user.tokenVersion },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "7d",
+      }
+    )
+
+    // Encode the user data as a URI component
+    const userData = encodeURIComponent(JSON.stringify(req.user))
+    res.cookie("token", token, {
+      httpOnly: true,
+    })
+
+    // Redirect the user to the frontend callback page with the user data and JWT token as query parameters
+    res.redirect(`http://localhost:3000/facebookcallback?&user=${userData}`)
+  }
+}
+
+export const loginWithGoogle = async (req, res) => {
+  {
+    const user = await User.findById(req.user._id).select("-password").exec()
+    if (user.banned) {
+      return res
+        .status(403)
+        .send("Your are banned.")
+        .redirect("http://localhost:3000")
+    }
+    const token = jwt.sign(
+      { _id: req.user._id, tokenVersion: user.tokenVersion },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "7d",
+      }
+    )
+
+    // Encode the user data as a URI component
+    const userData = encodeURIComponent(JSON.stringify(req.user))
+    res.cookie("token", token, {
+      httpOnly: true,
+    })
+
+    // Redirect the user to the frontend callback page with the user data and JWT token as query parameters
+    res.redirect(`http://localhost:3000/googlecallback?&user=${userData}`)
   }
 }

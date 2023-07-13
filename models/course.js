@@ -1,6 +1,6 @@
-import mongoose from "mongoose";
-const { Schema } = mongoose;
-const { ObjectId } = mongoose.Schema;
+import mongoose from 'mongoose'
+const { Schema } = mongoose
+const { ObjectId } = mongoose.Schema
 
 const supplementary_resourcesSchema = new Schema(
   {
@@ -53,6 +53,10 @@ const lessonSchema = new Schema(
       type: {},
       minlength: 200,
     },
+    quiz: {
+      type: ObjectId,
+      ref: 'Quiz',
+    },
     video: {},
     free_preview: {
       type: Boolean,
@@ -61,7 +65,22 @@ const lessonSchema = new Schema(
     supplementary_resources: [supplementary_resourcesSchema],
   },
   { timestamps: true }
-);
+)
+const studentProgressSchema = new Schema({
+  user: {
+    type: ObjectId,
+    ref: 'User',
+    required: true,
+  },
+  quizzesTaken: {
+    type: Number,
+    default: 0,
+  },
+  quizzesPassed: {
+    type: Number,
+    default: 0,
+  },
+})
 
 const courseSchema = new Schema(
   {
@@ -89,17 +108,27 @@ const courseSchema = new Schema(
     category: [],
     level: {
       type: String,
-      enum: ["All Levels", "Beginner", "Intermediate", "Expert"],
-      default: "All Levels",
+      enum: ['All Levels', 'Beginner', 'Intermediate', 'Expert'],
+      default: 'All Levels',
     },
     language: {
       type: String,
-      enum: ["English", "Chinese"],
-      default: "English",
+      enum: ['English', 'Chinese'],
+      default: 'English',
     },
     published: {
       type: Boolean,
       default: false,
+    },
+    quizNumber: {
+      type: Number,
+      default: 0,
+    },
+
+    quizProgress: [studentProgressSchema],
+    certificate: {
+      type: String,
+      trim: true,
     },
     paid: {
       type: Boolean,
@@ -107,7 +136,7 @@ const courseSchema = new Schema(
     },
     instructor: {
       type: ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
     },
     lessons: [lessonSchema],
@@ -118,6 +147,6 @@ const courseSchema = new Schema(
     EnrolledUser: [{ type: ObjectId, ref: 'User' }],
   },
   { timestamps: true }
-);
+)
 
-export default mongoose.model("Course", courseSchema);
+export default mongoose.model('Course', courseSchema)

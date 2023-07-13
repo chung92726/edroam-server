@@ -15,6 +15,20 @@ const userSchema = new Schema(
       required: true,
       unique: true,
     },
+    provider: {
+      type: String,
+      enum: ["local", "facebook", "google", "apple"],
+      default: "local",
+    },
+    providerId: { type: String, unique: true, sparse: true }, // Unique identifier from the OAuth2 provider
+    tokenVersion: {
+      type: Number,
+      default: 0,
+    },
+    banned: {
+      type: Boolean,
+      default: false,
+    },
     password: {
       type: String,
       required: true,
