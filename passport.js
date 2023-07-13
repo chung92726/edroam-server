@@ -11,7 +11,7 @@ require('dotenv').config()
 async function facebookCallback(accessToken, refreshToken, profile, done) {
   try {
     const user = await User.findOne({ email: profile._json.email }).exec()
-
+    console.log(profile)
     if (user) {
       // User already exists, log them in
       done(null, user)
@@ -38,7 +38,7 @@ async function facebookCallback(accessToken, refreshToken, profile, done) {
 async function googleCallback(accessToken, refreshToken, profile, done) {
   try {
     const user = await User.findOne({ email: profile.emails[0].value }).exec()
-    console.log(profile)
+
     if (user) {
       // User already exists, log them in
       done(null, user)
