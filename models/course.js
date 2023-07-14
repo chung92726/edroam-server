@@ -53,10 +53,7 @@ const lessonSchema = new Schema(
       type: {},
       minlength: 200,
     },
-    quiz: {
-      type: ObjectId,
-      ref: 'Quiz',
-    },
+    quiz: [{ type: ObjectId, ref: 'Quiz' }],
     video: {},
     free_preview: {
       type: Boolean,
@@ -121,16 +118,9 @@ const courseSchema = new Schema(
       type: Boolean,
       default: false,
     },
-    quizNumber: {
-      type: Number,
-      default: 0,
-    },
 
     quizProgress: [studentProgressSchema],
-    certificate: {
-      type: String,
-      trim: true,
-    },
+
     paid: {
       type: Boolean,
       default: true,

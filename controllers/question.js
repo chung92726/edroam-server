@@ -35,10 +35,7 @@ export const getQuestion = async (req, res) => {
 
     if (search) {
       andConditions.push({
-        $or: [
-          { title: { $regex: search, $options: 'i' } },
-          { content: { $regex: search, $options: 'i' } },
-        ],
+        $or: [{ title: { $regex: search, $options: 'i' } }],
       })
     }
 
