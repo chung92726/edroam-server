@@ -1,28 +1,29 @@
-import User from "../models/user"
-const stripe = require("stripe")(process.env.STRIPE_SECRET)
+import User from '../models/user'
+import Course from '../models/course'
+const stripe = require('stripe')(process.env.STRIPE_SECRET)
 
 export const currentAdmin = async (req, res) => {
   console.log(req.auth)
   try {
-    let user = await User.findById(req.auth._id).select("-password").exec()
-    if (!user.role.includes("Admin")) {
-      return res.status(403).send("Unauthorized")
+    let user = await User.findById(req.auth._id).select('-password').exec()
+    if (!user.role.includes('Admin')) {
+      return res.status(403).send('Unauthorized')
     } else {
       res.json({ ok: true })
     }
   } catch (err) {
-    return res.status(403).send("Unauthorized")
+    return res.status(403).send('Unauthorized')
   }
 }
 
 export const AllTransactions = async (req, res) => {
   try {
-    let user = await User.findById(req.auth._id).select("-password").exec()
-    if (!user.role.includes("Admin")) {
-      return res.status(403).send("Unauthorized")
+    let user = await User.findById(req.auth._id).select('-password').exec()
+    if (!user.role.includes('Admin')) {
+      return res.status(403).send('Unauthorized')
     }
   } catch (err) {
-    return res.status(403).send("Unauthorized")
+    return res.status(403).send('Unauthorized')
   }
 
   try {
@@ -31,7 +32,7 @@ export const AllTransactions = async (req, res) => {
     })
     // console.log(balanceTransactions)
     while (balanceTransactions.has_more) {
-      console.log("has more")
+      console.log('has more')
       const more = await stripe.balanceTransactions.list({
         limit: 100,
         starting_after:
@@ -43,7 +44,7 @@ export const AllTransactions = async (req, res) => {
     // console.log(balanceTransactions.data)
     const filtered = balanceTransactions.data.filter((item) => {
       // console.log(item.reporting_category)
-      return item.reporting_category == "platform_earning"
+      return item.reporting_category == 'platform_earning'
     })
     res.json(filtered)
   } catch (err) {
@@ -55,20 +56,20 @@ export const approveIntructor = async (req, res) => {
   // console.log(req.auth)
   try {
     const updatedUser = User.findOneAndUpdate(
-      { _id: req.auth._id, role: "Pending" }, // Specify the user ID and current role
-      { $set: { role: "Instructor" } }, // Set the new role
+      { _id: req.auth._id, role: 'Pending' }, // Specify the user ID and current role
+      { $set: { role: 'Instructor' } }, // Set the new role
       { new: true }
-    ).select("-password")
+    ).select('-password')
 
     if (!updatedUser) {
       return res
         .status(404)
-        .json({ message: "User not found or role is not pending" })
+        .json({ message: 'User not found or role is not pending' })
     }
 
     res.json(updatedUser)
   } catch (err) {
-    res.status(500).json({ message: "Error occurred while updating user role" })
+    res.status(500).json({ message: 'Error occurred while updating user role' })
   }
 }
 
@@ -80,15 +81,15 @@ export const readAllCourse = async (req, res) => {
     let pipeline = [
       {
         $lookup: {
-          from: "users",
-          localField: "instructor",
-          foreignField: "_id",
-          as: "instructor",
+          from: 'users',
+          localField: 'instructor',
+          foreignField: '_id',
+          as: 'instructor',
         },
       },
       {
         $unwind: {
-          path: "$instructor",
+          path: '$instructor',
           preserveNullAndEmptyArrays: true,
         },
       },
@@ -97,7 +98,7 @@ export const readAllCourse = async (req, res) => {
     if (search) {
       pipeline.push({
         $match: {
-          name: { $regex: search, $options: "i" },
+          name: { $regex: search, $options: 'i' },
         },
       })
     }
@@ -105,7 +106,7 @@ export const readAllCourse = async (req, res) => {
     if (instructorSearch) {
       pipeline.push({
         $match: {
-          "instructor.name": { $regex: instructorSearch, $options: "i" },
+          'instructor.name': { $regex: instructorSearch, $options: 'i' },
         },
       })
     }
@@ -119,7 +120,7 @@ export const readAllCourse = async (req, res) => {
           slug: 1,
           published: 1,
 
-          TotalRevenue: { $ifNull: ["$TotalRevenue", 0] },
+          TotalRevenue: { $ifNull: ['$TotalRevenue', 0] },
           createdAt: 1,
           instructor: { _id: 1, name: 1 },
         },
@@ -130,7 +131,7 @@ export const readAllCourse = async (req, res) => {
     res.json(courses)
   } catch (err) {
     console.log(err)
-    res.status(400).send("Create course failed. Try again.")
+    res.status(400).send('Create course failed. Try again.')
   }
 }
 
@@ -142,19 +143,19 @@ export const deleteCourse = async (req, res) => {
     res.json(course)
   } catch (err) {
     console.log(err)
-    res.status(400).send("Delete course failed. Try again.")
+    res.status(400).send('Delete course failed. Try again.')
   }
 }
 
 export const readCourse = async (req, res) => {
   try {
     let course = await Course.findOne({ slug: req.params.slug })
-      .populate("instructor", "_id name")
+      .populate('instructor', '_id name')
       .exec()
     res.json(course)
   } catch (err) {
     console.log(err)
-    res.status(400).send("Create course failed. Try again.")
+    res.status(400).send('Create course failed. Try again.')
   }
 }
 
@@ -165,12 +166,12 @@ export const publishCourse = async (req, res) => {
       { published: true },
       { new: true }
     )
-      .populate("instructor", "_id name")
+      .populate('instructor', '_id name')
       .exec()
     res.json(course)
   } catch (err) {
     console.log(err)
-    res.status(400).send("Publish course failed. Try again.")
+    res.status(400).send('Publish course failed. Try again.')
   }
 }
 
@@ -181,12 +182,12 @@ export const unpublishCourse = async (req, res) => {
       { published: false },
       { new: true }
     )
-      .populate("instructor", "_id name")
+      .populate('instructor', '_id name')
       .exec()
     res.json(course)
   } catch (err) {
     console.log(err)
-    res.status(400).send("Unpublish course failed. Try again.")
+    res.status(400).send('Unpublish course failed. Try again.')
   }
 }
 
@@ -199,12 +200,12 @@ export const deleteLesson = async (req, res) => {
       { $pull: { lessons: { _id: req.params.lessonId } } },
       { new: true }
     )
-      .populate("instructor", "_id name")
+      .populate('instructor', '_id name')
       .exec()
     res.json(course)
   } catch (err) {
     console.log(err)
-    res.status(400).send("Delete lesson failed. Try again.")
+    res.status(400).send('Delete lesson failed. Try again.')
   }
 }
 
@@ -213,7 +214,7 @@ export const readLesson = async (req, res) => {
     console.log(req.params.courseSlug, req.params.lessonSlug)
 
     let course = await Course.findOne({ slug: req.params.courseSlug })
-      .populate("instructor", "_id name")
+      .populate('instructor', '_id name')
       .exec()
     let lesson = course.lessons.find(
       (lesson) => lesson.slug === req.params.lessonSlug
@@ -222,19 +223,19 @@ export const readLesson = async (req, res) => {
     res.json(lesson)
   } catch (err) {
     console.log(err)
-    res.status(400).send("Read lesson failed. Try again.")
+    res.status(400).send('Read lesson failed. Try again.')
   }
 }
 
 export const getStudents = async (req, res) => {
   try {
     let users = await User.find({ courses: req.body.courseId })
-      .populate("courses", "_id name")
+      .populate('courses', '_id name')
       .exec()
     res.json(users)
   } catch (err) {
     console.log(err)
-    res.status(400).send("Get students failed. Try again.")
+    res.status(400).send('Get students failed. Try again.')
   }
 }
 
@@ -256,10 +257,10 @@ export const removeStudentFromCourse = async (req, res) => {
       { new: true }
     ).exec()
 
-    res.json({ message: "User removed from course successfully", user, course })
+    res.json({ message: 'User removed from course successfully', user, course })
   } catch (err) {
     console.log(err)
-    res.status(400).send("Remove student from course failed. Try again.")
+    res.status(400).send('Remove student from course failed. Try again.')
   }
 }
 
@@ -267,18 +268,18 @@ export const getMember = async (req, res) => {
   try {
     let users = await User.findById(req.params.userId)
       .populate({
-        path: "courses",
-        select: "_id slug paid name price level language instructor",
+        path: 'courses',
+        select: '_id slug paid name price level language instructor',
         populate: {
-          path: "instructor",
-          select: "_id name",
+          path: 'instructor',
+          select: '_id name',
         },
       })
       .exec()
     res.json(users)
   } catch (err) {
     console.log(err)
-    res.status(400).send("Get member failed. Try again.")
+    res.status(400).send('Get member failed. Try again.')
   }
 }
 
@@ -286,12 +287,12 @@ export const getMemberCreatedCourses = async (req, res) => {
   try {
     let courses = await Course.find({ instructor: req.params.userId })
       .sort({ createdAt: -1 })
-      .populate("instructor", "_id name")
+      .populate('instructor', '_id name')
       .exec()
     res.json(courses)
   } catch (err) {
     console.log(err)
-    res.status(400).send("Get member created courses failed. Try again.")
+    res.status(400).send('Get member created courses failed. Try again.')
   }
 }
 
@@ -309,10 +310,10 @@ export const banUser = async (req, res) => {
       { new: true }
     ).exec()
 
-    res.json({ message: "User banned successfully", user })
+    res.json({ message: 'User banned successfully', user })
   } catch (err) {
     console.log(err)
-    res.status(400).send("Ban user failed. Try again.")
+    res.status(400).send('Ban user failed. Try again.')
   }
 }
 
@@ -328,10 +329,10 @@ export const unBanUser = async (req, res) => {
       { new: true }
     )
 
-    res.json({ message: "User unbanned successfully", user })
+    res.json({ message: 'User unbanned successfully', user })
   } catch (err) {
     console.log(err)
-    res.status(400).send("Unban user failed. Try again.")
+    res.status(400).send('Unban user failed. Try again.')
   }
 }
 
@@ -342,20 +343,20 @@ export const getAllUsers = async (req, res) => {
     const searchQuery = searchTerm
       ? {
           $or: [
-            { name: { $regex: searchTerm, $options: "i" } },
-            { email: { $regex: searchTerm, $options: "i" } },
+            { name: { $regex: searchTerm, $options: 'i' } },
+            { email: { $regex: searchTerm, $options: 'i' } },
           ],
         }
       : {}
 
     let users = await User.find(searchQuery)
-      .populate("courses", "_id name")
+      .populate('courses', '_id name')
       .exec()
 
     res.json(users)
   } catch (err) {
     console.log(err)
-    res.status(400).send("Get all users failed. Try again.")
+    res.status(400).send('Get all users failed. Try again.')
   }
 }
 
@@ -366,9 +367,9 @@ export const deleteUser = async (req, res) => {
     // Remove user from the course's EnrolledUser field
     const user = await User.findByIdAndDelete(userId).exec()
 
-    res.json({ message: "User deleted successfully", user })
+    res.json({ message: 'User deleted successfully', user })
   } catch (err) {
     console.log(err)
-    res.status(400).send("Delete user failed. Try again.")
+    res.status(400).send('Delete user failed. Try again.')
   }
 }

@@ -1,19 +1,67 @@
 import Quiz from '../models/quiz'
 import StudentResponse from '../models/quizResponse'
+import Course from '../models/course'
 
 export const createQuiz = async (req, res) => {
   try {
-    const quiz = new Quiz(req.body)
+    const { title, description, passingRate, course, lesson, coursePassing } =
+      req.body
+
+    const userId = req.auth._id
+    const Or_Course = await Course.findById(course)
+
+    if (!Or_Course) {
+      return res.status(404).json({ error: 'Course not found' })
+    }
+    if (Or_Course.instructor.toString() != userId.toString()) {
+      return res.status(401).json({ error: 'You are not authorized' })
+    }
+
+    // Find the lesson within the course
+    const Or_Lesson = Or_Course.lessons.find(
+      (lessonItem) => lessonItem._id.toString() === lesson
+    )
+
+    if (!Or_Lesson) {
+      return res.status(404).json({ error: 'Lesson not found' })
+    }
+
+    const quiz = new Quiz({
+      title,
+      description,
+      passingRate,
+      courseId: course,
+      lessonId: lesson,
+      lessonTitle: Or_Lesson.title, // Use the title from the lesson
+      courseTitle: Or_Course.name,
+      coursePassingQuiz: coursePassing,
+      instructorId: userId,
+    })
     await quiz.save()
     res.status(201).json(quiz)
   } catch (error) {
+    console.log(error)
     res.status(400).json({ error: error.message })
   }
 }
 
 export const getQuizzes = async (req, res) => {
+  const userId = req.auth._id
+  const { search } = req.query
+
   try {
-    const quizzes = await Quiz.find()
+    const searchRegex = new RegExp(search, 'i') // case-insensitive search
+
+    // Search in Quiz model
+    const quizzes = await Quiz.find({
+      instructorId: userId,
+      $or: [
+        { title: searchRegex },
+        { courseTitle: searchRegex },
+        { lessonTitle: searchRegex },
+      ],
+    })
+
     res.status(200).json(quizzes)
   } catch (error) {
     res.status(400).json({ error: error.message })
@@ -22,10 +70,11 @@ export const getQuizzes = async (req, res) => {
 
 export const getQuizById = async (req, res) => {
   try {
-    const quiz = await Quiz.findById(req.params.id)
+    const quiz = await Quiz.findById(req.params.quizId)
     if (!quiz) {
       return res.status(404).json({ error: 'Quiz not found' })
     }
+
     res.status(200).json(quiz)
   } catch (error) {
     res.status(400).json({ error: error.message })
@@ -33,14 +82,34 @@ export const getQuizById = async (req, res) => {
 }
 
 export const updateQuiz = async (req, res) => {
+  const { title, description, passingRate, course, lesson, coursePassing } =
+    req.body
+  console.log(req.params.quizId)
   try {
-    const quiz = await Quiz.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    })
-    if (!quiz) {
+    const quiz_check = await Quiz.findById(req.params.quizId)
+    if (!quiz_check) {
       return res.status(404).json({ error: 'Quiz not found' })
     }
+    if (quiz_check.instructorId.toString() != req.auth._id.toString()) {
+      return res.status(401).json({ error: 'You are not authorized' })
+    }
+
+    const quiz = await Quiz.findByIdAndUpdate(
+      req.params.quizId,
+      {
+        title,
+        description,
+        passingRate,
+        courseId: course,
+        lessonId: lesson,
+        coursePassingQuiz: coursePassing,
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    )
+
     res.status(200).json(quiz)
   } catch (error) {
     res.status(400).json({ error: error.message })
@@ -49,10 +118,15 @@ export const updateQuiz = async (req, res) => {
 
 export const deleteQuiz = async (req, res) => {
   try {
-    const quiz = await Quiz.findByIdAndDelete(req.params.id)
-    if (!quiz) {
+    const quiz_check = await Quiz.findById(req.params.quizId)
+    if (!quiz_check) {
       return res.status(404).json({ error: 'Quiz not found' })
     }
+    if (quiz_check.instructorId.toString() != req.auth._id.toString()) {
+      return res.status(401).json({ error: 'You are not authorized' })
+    }
+    const quiz = await Quiz.findByIdAndDelete(req.params.quizId)
+
     res.status(200).json({ message: 'Quiz deleted' })
   } catch (error) {
     res.status(400).json({ error: error.message })
@@ -264,5 +338,65 @@ export const submitQuiz = async (req, res) => {
       .json({ message: 'Quiz submitted', score: studentResponse.score })
   } catch (error) {
     res.status(400).json({ error: error.message })
+  }
+}
+
+export const publishQuiz = async (req, res) => {
+  try {
+    const quizId = req.params.quizId
+    const quiz = await Quiz.findById(quizId)
+
+    if (!quiz) {
+      return res.status(404).json({ error: 'Quiz not found' })
+    }
+    if (quiz.published) {
+      return res.status(400).json({ error: 'Quiz already published' })
+    }
+    if (quiz.instructorId.toString() !== req.auth._id.toString()) {
+      return res.status(403).json({ error: 'Unauthorized' })
+    }
+
+    // Ensure the quiz has at least one question
+    if (quiz.questions.length < 1) {
+      return res.status(400).json({
+        error:
+          'Quiz must contain at least one question before it can be published',
+      })
+    }
+
+    // Update the published field
+    quiz.published = true
+    await quiz.save()
+
+    res.status(200).json(quiz)
+  } catch (error) {
+    console.log(error)
+    res.status(500).json({ error: error.message })
+  }
+}
+
+export const unpublishQuiz = async (req, res) => {
+  try {
+    const quizId = req.params.quizId
+    const quiz = await Quiz.findById(quizId)
+
+    if (!quiz) {
+      return res.status(404).json({ error: 'Quiz not found' })
+    }
+    if (!quiz.published) {
+      return res.status(400).json({ error: 'Quiz already unpublished' })
+    }
+    if (quiz.instructorId.toString() !== req.auth._id.toString()) {
+      return res.status(403).json({ error: 'Unauthorized' })
+    }
+
+    // Update the published field
+    quiz.published = false
+    await quiz.save()
+
+    res.status(200).json(quiz)
+  } catch (error) {
+    console.log(error)
+    res.status(500).json({ error: error.message })
   }
 }

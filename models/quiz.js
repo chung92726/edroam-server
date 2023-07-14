@@ -50,12 +50,39 @@ const quizSchema = new Schema(
       type: ObjectId,
       ref: 'Course',
     },
+    courseTitle: {
+      type: String,
+    },
+    lessonId: {
+      type: ObjectId,
+    },
+    lessonTitle: {
+      type: String,
+    },
+
+    instructorId: {
+      type: ObjectId,
+      ref: 'User',
+    },
+    useRandomQuestions: {
+      type: Boolean,
+      default: false,
+    },
+    randomQuestionsNumber: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    coursePassingQuiz: {
+      type: Boolean,
+      default: false,
+    },
     questions: [questionSchema],
     reservedQuestions: [questionSchema],
     passingRate: {
       type: Number,
-      default: 0,
-      min: 0,
+      default: 50,
+      min: 10,
       max: 100,
     },
     published: {
