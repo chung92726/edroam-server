@@ -70,7 +70,17 @@ export const instructorUpdated = async (req, res) => {
 export const update = async (req, res) => {
   try {
     // console.log(req.body);
-    const { name, website, biography, picture } = req.body
+    const {
+      name,
+      website,
+      biography,
+      picture,
+      gender,
+      ageRange,
+      phoneNumber,
+      courseDetails,
+      teachingExperience,
+    } = req.body
 
     //validation
     if (!name) return res.status(400).send("Name is required")
@@ -78,10 +88,15 @@ export const update = async (req, res) => {
     const updated = await User.findByIdAndUpdate(
       req.auth._id,
       {
-        name: name,
-        website: website,
-        biography: biography,
-        picture: picture,
+        name,
+        website,
+        biography,
+        picture,
+        gender,
+        ageRange,
+        phoneNumber,
+        courseDetails,
+        teachingExperience,
       },
       { new: true }
     )

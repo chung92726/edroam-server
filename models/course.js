@@ -100,6 +100,7 @@ const courseSchema = new Schema(
       minlength: 200,
       required: true,
     },
+    detailDescription: { type: String },
     price: {
       type: Number,
       default: 9.99,
