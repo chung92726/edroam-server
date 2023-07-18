@@ -173,25 +173,26 @@ export const deleteQuestion = async (req, res) => {
   }
 }
 
-export const updateQuestion = async (req, res) => {
+export const updateQuestions = async (req, res) => {
+  console.log(req.body)
   try {
-    const quiz = await Quiz.findById(req.params.quizId)
-    if (!quiz) {
+    const ver_quiz = await Quiz.findById(req.params.quizId)
+    if (!ver_quiz) {
       return res.status(404).json({ error: 'Quiz not found' })
     }
-
-    const questionIndex = quiz.questions.findIndex(
-      (question) => question._id.toString() === req.params.questionId
-    )
-
-    if (questionIndex === -1) {
-      return res.status(404).json({ error: 'Question not found' })
+    if (ver_quiz.instructorId.toString() != req.auth._id.toString()) {
+      return res.status(401).json({ error: 'You are not authorized' })
     }
 
-    quiz.questions[questionIndex] = req.body
-    await quiz.save()
+    // Replace the entire questions array with the new array
+    ver_quiz.questions = req.body.questions
 
-    res.status(200).json({ message: 'Question updated', question: req.body })
+    // Save the updated quiz
+    await ver_quiz.save()
+
+    res
+      .status(200)
+      .json({ message: 'Questions updated', questions: req.body.questions })
   } catch (error) {
     res.status(400).json({ error: error.message })
   }

@@ -18,6 +18,13 @@ const answerSchema = new Schema({
     maxlength: 1000,
   },
 })
+function multipleCorrectAnswersOrSingleAnswer(val) {
+  if (this.multipleCorrectAnswers) {
+    return val.filter((answer) => answer.isCorrect).length >= 2
+  } else {
+    return val.filter((answer) => answer.isCorrect).length === 1
+  }
+}
 
 function arrayLimit(val) {
   return val.length >= 2 && val.length <= 8
@@ -28,9 +35,17 @@ const questionSchema = new Schema({
     trim: true,
     required: true,
   },
+  multipleCorrectAnswers: {
+    type: Boolean,
+    default: false,
+  },
   answers: {
     type: [answerSchema],
     validate: [arrayLimit, 'Answers must be between 2 and 8.'],
+    validate: [
+      multipleCorrectAnswersOrSingleAnswer,
+      'At least two answers must be correct.',
+    ],
   },
 })
 

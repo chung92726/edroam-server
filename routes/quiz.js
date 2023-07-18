@@ -10,7 +10,7 @@ import {
   deleteQuiz,
   addQuestion,
   deleteQuestion,
-  updateQuestion,
+  updateQuestions,
   generateRandomQuiz,
   addReservedQuestion,
   publishQuiz,
@@ -41,5 +41,11 @@ router.put(
 )
 router.get('/quiz/get-quiz/:quizId', requireSignin, getQuizById)
 router.put('/quiz/update-quiz/:quizId', requireSignin, isInstructor, updateQuiz)
+router.put(
+  '/quiz/update-question/:quizId',
+  requireSignin,
+  isInstructor,
+  updateQuestions
+)
 
 module.exports = router
