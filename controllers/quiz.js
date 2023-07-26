@@ -1,6 +1,7 @@
 import Quiz from '../models/quiz'
 import StudentResponse from '../models/quizResponse'
 import Course from '../models/course'
+import User from '../models/user'
 
 export const createQuiz = async (req, res) => {
   try {
@@ -73,6 +74,9 @@ export const getQuizById = async (req, res) => {
     const quiz = await Quiz.findById(req.params.quizId)
     if (!quiz) {
       return res.status(404).json({ error: 'Quiz not found' })
+    }
+    if (quiz.instructorId.toString() != req.auth._id.toString()) {
+      return res.status(401).json({ error: 'You are not authorized' })
     }
 
     res.status(200).json(quiz)
@@ -304,14 +308,22 @@ export const addAnswer = async (req, res) => {
 
 export const submitQuiz = async (req, res) => {
   try {
-    const quiz = await Quiz.findById(req.body.quizId)
+    const quiz = await Quiz.findById(req.params.quizId)
     if (!quiz) {
       return res.status(404).json({ error: 'Quiz not found' })
     }
+    const user = await User.findById(req.auth._id)
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+    if (!user.courses.includes(quiz.courseId)) {
+      return res.status(401).json({ error: 'You are not authorized' })
+    }
 
     const studentResponse = new StudentResponse({
-      quizId: req.body.quizId,
-      studentName: req.body.studentName,
+      quizId: req.params.quizId,
+      studentName: user.name,
+      studentId: user._id,
       answers: req.body.answers,
     })
 
@@ -319,11 +331,14 @@ export const submitQuiz = async (req, res) => {
     studentResponse.answers.forEach((answer) => {
       const question = quiz.questions.id(answer.questionId)
       if (question) {
-        const isCorrect = answer.selectedAnswers.every(
-          (selectedAnswerIndex, i) => {
-            return question.answers[selectedAnswerIndex].isCorrect
-          }
-        )
+        const correctAnswerIds = question.answers
+          .filter((ans) => ans.isCorrect)
+          .map((ans) => ans._id.toString())
+
+        const isCorrect =
+          answer.selectedAnswers.every((selectedAnswerId) =>
+            correctAnswerIds.includes(selectedAnswerId.toString())
+          ) && answer.selectedAnswers.length === correctAnswerIds.length
 
         if (isCorrect) {
           correctAnswers++
@@ -332,6 +347,9 @@ export const submitQuiz = async (req, res) => {
     })
 
     studentResponse.score = (correctAnswers / quiz.questions.length) * 100
+    if (studentResponse.score >= quiz.passingScore) {
+      studentResponse.pass = true
+    }
     await studentResponse.save()
 
     res
@@ -399,5 +417,116 @@ export const unpublishQuiz = async (req, res) => {
   } catch (error) {
     console.log(error)
     res.status(500).json({ error: error.message })
+  }
+}
+
+export const getQuizByCourseIdLessonId = async (req, res) => {
+  try {
+    const quiz = await Quiz.find({
+      courseId: req.params.courseId,
+      lessonId: req.params.lessonId,
+      published: true,
+    }).select('-questions.answers.isCorrect')
+
+    if (!quiz) {
+      console.log('Quiz not found')
+      return res.status(404).json({ error: 'Quiz not found' })
+    }
+    const user = await User.findById(req.auth._id)
+    if (!user) {
+      console.log('User not found')
+      return res.status(404).json({ error: 'User not found' })
+    }
+    if (user.courses.includes(req.params.courseId)) {
+      return res.status(200).json(quiz)
+    } else {
+      return res.status(403).json({ error: 'Unauthorized' })
+    }
+  } catch (error) {
+    console.log(error)
+    res.status(400).json({ error: error.message })
+  }
+}
+
+export const UserGetQuizById = async (req, res) => {
+  try {
+    const quiz = await Quiz.findById(req.params.quizId).select(
+      '-questions.answers.isCorrect'
+    )
+    if (!quiz) {
+      return res.status(404).json({ error: 'Quiz not found' })
+    }
+    const user = await User.findById(req.auth._id)
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+    if (user.courses.includes(quiz.courseId)) {
+      return res.status(200).json(quiz)
+    } else {
+      return res.status(403).json({ error: 'Unauthorized' })
+    }
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+}
+
+export const fetchHighestQuizResponse = async (req, res) => {
+  try {
+    const quiz = await Quiz.findById(req.params.quizId)
+    if (!quiz) {
+      return res.status(404).json({ error: 'Quiz not found' })
+    }
+    const user = await User.findById(req.auth._id)
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+    if (!user.courses.includes(quiz.courseId)) {
+      return res.status(401).json({ error: 'You are not authorized' })
+    }
+
+    const highestResponse = await StudentResponse.find({
+      quizId: req.params.quizId,
+      studentId: req.auth._id,
+    })
+      .sort({ score: -1 })
+      .limit(1)
+
+    res.status(200).json(highestResponse)
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+}
+
+export const UserGetQuizReview = async (req, res) => {
+  try {
+    const quiz = await Quiz.findById(req.params.quizId).populate(
+      'courseId',
+      'slug _id'
+    )
+    if (!quiz) {
+      return res.status(404).json({ error: 'Quiz not found' })
+    }
+    const user = await User.findById(req.auth._id)
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+    if (!user.courses.includes(quiz.courseId._id)) {
+      return res.status(401).json({ error: 'You are not authorized' })
+    }
+
+    const highestResponse = await StudentResponse.find({
+      quizId: req.params.quizId,
+      studentId: req.auth._id,
+    })
+      .sort({ score: -1 })
+      .limit(1)
+
+    if (!highestResponse) {
+      return res.status(404).json({ error: "You haven't took the quiz" })
+    }
+
+    res.status(200).json(quiz)
+  } catch (error) {
+    res.status(400).json({ error: error.message })
   }
 }

@@ -10,6 +10,11 @@ const responseSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  studentId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+  },
   answers: [
     {
       questionId: {
@@ -18,7 +23,7 @@ const responseSchema = new mongoose.Schema({
       },
       selectedAnswers: [
         {
-          type: Number,
+          type: mongoose.Schema.Types.ObjectId,
           required: true,
         },
       ],
@@ -27,6 +32,10 @@ const responseSchema = new mongoose.Schema({
   score: {
     type: Number,
     default: 0,
+  },
+  pass: {
+    type: Boolean,
+    default: false,
   },
 })
 

@@ -15,6 +15,11 @@ import {
   addReservedQuestion,
   publishQuiz,
   unpublishQuiz,
+  getQuizByCourseIdLessonId,
+  UserGetQuizById,
+  submitQuiz,
+  fetchHighestQuizResponse,
+  UserGetQuizReview,
 } from '../controllers/quiz'
 
 const router = express.Router()
@@ -46,6 +51,25 @@ router.put(
   requireSignin,
   isInstructor,
   updateQuestions
+)
+router.get(
+  '/quiz/get-quiz-by-courseId-lessonId/:courseId/:lessonId',
+  requireSignin,
+  getQuizByCourseIdLessonId
+)
+router.get('/quiz/user-get-quiz/:quizId', requireSignin, UserGetQuizById)
+
+router.post('/quiz/user-submit-quiz/:quizId', requireSignin, submitQuiz)
+router.get(
+  '/quiz/get-highest-quiz-response/:quizId',
+  requireSignin,
+  fetchHighestQuizResponse
+)
+
+router.get(
+  '/quiz/user-get-quiz-review/:quizId',
+  requireSignin,
+  UserGetQuizReview
 )
 
 module.exports = router

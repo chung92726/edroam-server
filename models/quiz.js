@@ -15,13 +15,16 @@ const answerSchema = new Schema({
   explanation: {
     type: String,
     trim: true,
-    maxlength: 1000,
   },
 })
-function multipleCorrectAnswersOrSingleAnswer(val) {
+function multipleCorrectAnswers(val) {
   if (this.multipleCorrectAnswers) {
     return val.filter((answer) => answer.isCorrect).length >= 2
-  } else {
+  }
+}
+
+function notMultipleCorrectAnswers(val) {
+  if (!this.multipleCorrectAnswers) {
     return val.filter((answer) => answer.isCorrect).length === 1
   }
 }
@@ -42,10 +45,8 @@ const questionSchema = new Schema({
   answers: {
     type: [answerSchema],
     validate: [arrayLimit, 'Answers must be between 2 and 8.'],
-    validate: [
-      multipleCorrectAnswersOrSingleAnswer,
-      'At least two answers must be correct.',
-    ],
+    validate: [multipleCorrectAnswers, 'At least two answers must be correct.'],
+    validate: [notMultipleCorrectAnswers, 'Only one answer can be correct.'],
   },
 })
 
@@ -59,7 +60,6 @@ const quizSchema = new Schema(
     description: {
       type: String,
       trim: true,
-      maxlength: 3000,
     },
     courseId: {
       type: ObjectId,
