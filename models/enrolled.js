@@ -19,6 +19,7 @@ const enrolledSchema = new Schema(
     price: {
       type: Number,
     },
+    session: {},
   },
   { timestamps: true }
 )

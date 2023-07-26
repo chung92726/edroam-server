@@ -399,6 +399,8 @@ export const paidEnrollment = async (req, res) => {
     if (!course.paid) {
       return res.status(400).send('Free course does not require payment')
     }
+    // get user from db to get stripe session id
+    const user = await User.findById(req.auth._id).exec()
     // application fee 30% for platform and 70% for instructor
     const fee = (course.price * 30) / 100
     // create session
@@ -425,10 +427,13 @@ export const paidEnrollment = async (req, res) => {
         transfer_data: {
           destination: course.instructor.stripe_account_id,
         },
+        description: course.name,
       },
       // redirect url after payment
       success_url: `${process.env.STRIPE_SUCCESS_URL}/${course._id}`,
       cancel_url: process.env.STRIPE_CANCEL_URL,
+      client_reference_id: req.auth._id,
+      customer_email: user.email,
     })
     console.log('session', session)
     // save user's the stripe session
@@ -467,11 +472,16 @@ export const stripeSuccess = async (req, res) => {
         course: course._id,
         instructor: course.instructor,
         price: course.price,
+        session: session,
       }).save()
+      const updatedTotalRevenue = (
+        Number(course.TotalRevenue) + Number(course.price)
+      ).toFixed(2)
       const updated = await Course.findByIdAndUpdate(course._id, {
         $addToSet: { EnrolledUser: req.auth._id },
         // add TotalRevenue
-        $inc: { TotalRevenue: course.price },
+        // $inc: { TotalRevenue: course.price },
+        $set: { TotalRevenue: updatedTotalRevenue },
       })
     }
     res.json({ success: true, course: course })
@@ -590,7 +600,7 @@ export const getHistory = async (req, res) => {
       .populate('course', '_id name')
       .populate('instructor', '_id name picture')
       .exec()
-    console.log(history)
+    // console.log(history)
     res.json(history)
   } catch (err) {
     console.log(err)

@@ -1,5 +1,6 @@
 import User from '../models/user'
 import Course from '../models/course'
+import Enrolled from '../models/enrolled'
 const stripe = require('stripe')(process.env.STRIPE_SECRET)
 
 export const currentAdmin = async (req, res) => {
@@ -29,6 +30,7 @@ export const AllTransactions = async (req, res) => {
   try {
     const balanceTransactions = await stripe.balanceTransactions.list({
       limit: 100,
+      stripeAccount: 'acct_1NVWoDQj7Sq5RZ8z',
     })
     // console.log(balanceTransactions)
     while (balanceTransactions.has_more) {
@@ -41,10 +43,19 @@ export const AllTransactions = async (req, res) => {
       balanceTransactions.data.push(...more.data)
       balanceTransactions.has_more = more.has_more
     }
+
     // console.log(balanceTransactions.data)
+
+    const paymentIntent = await stripe.paymentIntents.retrieve(
+      'pi_3NWHMxHaFeBp79rF0RjRpBjz'
+    )
+    console.log('paymentIntent', paymentIntent)
+    const charge = await stripe.charges.retrieve('ch_3NWHMxHaFeBp79rF0jta9nmZ')
+    console.log('charge', charge)
+
     const filtered = balanceTransactions.data.filter((item) => {
       // console.log(item.reporting_category)
-      return item.reporting_category == 'platform_earning'
+      return item.reporting_category == 'charge'
     })
     res.json(filtered)
   } catch (err) {
@@ -54,10 +65,11 @@ export const AllTransactions = async (req, res) => {
 
 export const approveIntructor = async (req, res) => {
   // console.log(req.auth)
+  const { userId } = req.params
   try {
-    const updatedUser = User.findOneAndUpdate(
-      { _id: req.auth._id, role: 'Pending' }, // Specify the user ID and current role
-      { $set: { role: 'Instructor' } }, // Set the new role
+    const updatedUser = await User.findOneAndUpdate(
+      { _id: userId, role: 'Pending' }, // Specify the user ID and current role
+      { $set: { role: ['Subscriber', 'Instructor'] } }, // Set the new role
       { new: true }
     ).select('-password')
 
@@ -69,6 +81,30 @@ export const approveIntructor = async (req, res) => {
 
     res.json(updatedUser)
   } catch (err) {
+    console.log(err)
+    res.status(500).json({ message: 'Error occurred while updating user role' })
+  }
+}
+
+export const unapproveIntructor = async (req, res) => {
+  // console.log(req.auth)
+  const { userId } = req.params
+  try {
+    const updatedUser = await User.findOneAndUpdate(
+      { _id: userId, role: 'Instructor' }, // Specify the user ID and current role
+      { $set: { role: ['Subscriber', 'Pending'] } }, // Set the new role
+      { new: true }
+    ).select('-password')
+
+    if (!updatedUser) {
+      return res
+        .status(404)
+        .json({ message: 'User not found or role is not Instructor' })
+    }
+
+    res.json(updatedUser)
+  } catch (err) {
+    console.log(err)
     res.status(500).json({ message: 'Error occurred while updating user role' })
   }
 }
@@ -371,5 +407,69 @@ export const deleteUser = async (req, res) => {
   } catch (err) {
     console.log(err)
     res.status(400).send('Delete user failed. Try again.')
+  }
+}
+
+export const getAllPending = async (req, res) => {
+  try {
+    const { searchTerm } = req.query
+
+    const searchQuery = searchTerm
+      ? {
+          $or: [
+            { name: { $regex: searchTerm, $options: 'i' } },
+            { email: { $regex: searchTerm, $options: 'i' } },
+          ],
+          role: 'Pending',
+        }
+      : { role: 'Pending' }
+
+    let users = await User.find(searchQuery)
+      .populate('courses', '_id name')
+      .exec()
+
+    res.json(users)
+  } catch (err) {
+    console.log(err)
+    res.status(400).send('Get all users failed. Try again.')
+  }
+}
+
+export const getAllInstructors = async (req, res) => {
+  try {
+    const { searchTerm } = req.query
+
+    const searchQuery = searchTerm
+      ? {
+          $or: [
+            { name: { $regex: searchTerm, $options: 'i' } },
+            { email: { $regex: searchTerm, $options: 'i' } },
+          ],
+          role: 'Instructor',
+        }
+      : { role: 'Instructor' }
+
+    let users = await User.find(searchQuery)
+      .populate('courses', '_id name')
+      .exec()
+
+    res.json(users)
+  } catch (err) {
+    console.log(err)
+    res.status(400).send('Get all users failed. Try again.')
+  }
+}
+
+export const getAllEnrolled = async (req, res) => {
+  try {
+    const history = await Enrolled.find()
+      .populate('course', '_id name picture')
+      .populate('instructor', '_id name picture')
+      .exec()
+    // console.log(history)
+    res.json(history)
+  } catch (err) {
+    console.log(err)
+    return res.status(400).send('Get history failed')
   }
 }
