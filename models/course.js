@@ -78,6 +78,35 @@ const studentProgressSchema = new Schema({
     default: 0,
   },
 })
+const courseReview = new Schema(
+  {
+    userId: {
+      type: ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    rating: {
+      type: Number,
+      required: true,
+      // validate: {
+      //   validator: Number.isInteger,
+      //   message: '{VALUE} is not an integer value',
+      // },
+      min: 0.5,
+      max: 5,
+    },
+    review: {
+      type: String,
+
+      maxlength: 2000,
+    },
+    instructorFeedback: {
+      type: String,
+      default: '',
+    },
+  },
+  { timestamps: true }
+)
 
 const courseSchema = new Schema(
   {
@@ -87,6 +116,14 @@ const courseSchema = new Schema(
       minlength: 3,
       maxlength: 320,
       required: true,
+    },
+    numberOfReviews: {
+      type: Number,
+      default: 0,
+    },
+    averageRating: {
+      type: Number,
+      default: 0,
     },
     slug: {
       type: String,
@@ -102,6 +139,7 @@ const courseSchema = new Schema(
       type: Number,
       default: 9.99,
     },
+    reviews: [courseReview],
     image: {},
     category: [],
     level: {
