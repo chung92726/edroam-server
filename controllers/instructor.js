@@ -1,4 +1,5 @@
 import User from '../models/user'
+import Enrolled from '../models/enrolled'
 const stripe = require('stripe')(process.env.STRIPE_SECRET)
 var querystring = require('querystring')
 import Course from '../models/course'
@@ -9,27 +10,27 @@ export const makeInstructor = async (req, res) => {
   try {
     const user = await User.findById(req.body._id).exec()
     // 2. if user dont have stripe_account_id yet, then create new
-    console.log('USER ==> ', user)
+    // console.log('USER ==> ', user)
 
     const {
-      picture,
+      // picture,
       name,
-      website,
+      // website,
       biography,
-      gender,
-      ageRange,
+      // gender,
+      // ageRange,
       phoneNumber,
       courseDetails,
       teachingExperience,
     } = user
 
     const info = {
-      picture,
+      // picture,
       name,
-      website,
+      // website,
       biography,
-      gender,
-      ageRange,
+      // gender,
+      // ageRange,
       phoneNumber,
       courseDetails,
       teachingExperience,
@@ -47,12 +48,12 @@ export const makeInstructor = async (req, res) => {
 
     //validation
     if (
-      !user.picture ||
+      // !user.picture ||
       !user.name ||
-      !user.website ||
+      // !user.website ||
       !user.biography ||
-      !user.gender ||
-      !user.ageRange ||
+      // !user.gender ||
+      // !user.ageRange ||
       !user.phoneNumber ||
       !user.courseDetails ||
       !user.teachingExperience
@@ -62,7 +63,9 @@ export const makeInstructor = async (req, res) => {
 
     if (!user.stripe_account_id) {
       const account = await stripe.accounts.create({
-        type: 'standard',
+        type: 'express',
+        email: user.email,
+        default_currency: 'USD',
       })
       console.log('ACCOUNT => ', account.id)
       user.stripe_account_id = account.id
@@ -231,5 +234,40 @@ export const studentCount = async (req, res) => {
   } catch (err) {
     console.log(err)
     return res.status(400).send('Student count failed')
+  }
+}
+
+export const getAllEnrolled = async (req, res) => {
+  try {
+    const history = await Enrolled.find({ instructor: req.auth._id })
+      .populate('course', '_id name picture')
+      .populate('user', '_id name picture')
+      .exec()
+    // console.log(history)
+    res.json(history)
+  } catch (err) {
+    console.log(err)
+    return res.status(400).send('Get history failed')
+  }
+}
+
+export const getRevenue = async (req, res) => {
+  try {
+    const courseId = req.params.courseId
+    const history = await Enrolled.find({
+      instructor: req.auth._id,
+      course: courseId,
+    }).exec()
+
+    let totalRevenue = 0
+    history.map((item) => {
+      totalRevenue = (Number(totalRevenue) + Number(item.price) * 0.7).toFixed(
+        2
+      )
+    })
+    return res.json({ totalRevenue })
+  } catch (err) {
+    console.log(err)
+    return res.status(400).send('Get Revenue Fail')
   }
 }
