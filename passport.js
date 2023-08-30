@@ -13,8 +13,12 @@ async function facebookCallback(accessToken, refreshToken, profile, done) {
     const user = await User.findOne({ email: profile._json.email }).exec()
     console.log(profile)
     if (user) {
+      const updateProfilePic = await User.findOneAndUpdate(
+        { email: profile._json.email },
+        { 'picture.Location': profile.photos[0].value }
+      )
       // User already exists, log them in
-      done(null, user)
+      done(null, updateProfilePic)
     } else {
       // Register a new user
       const newUser = new User({
