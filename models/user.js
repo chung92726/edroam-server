@@ -1,6 +1,7 @@
-import mongoose from "mongoose"
+import mongoose from 'mongoose'
 const { Schema } = mongoose
 const { ObjectId } = mongoose.Schema
+import { generateUniqueReferralCode } from '../utils/referalCode.js'
 
 const userSchema = new Schema(
   {
@@ -17,8 +18,8 @@ const userSchema = new Schema(
     },
     provider: {
       type: String,
-      enum: ["local", "facebook", "google", "apple"],
-      default: "local",
+      enum: ['local', 'facebook', 'google', 'apple'],
+      default: 'local',
     },
     providerId: { type: String, unique: true, sparse: true }, // Unique identifier from the OAuth2 provider
     tokenVersion: {
@@ -35,6 +36,13 @@ const userSchema = new Schema(
       min: 8,
       max: 64,
     },
+    referralCode: {
+      type: String,
+      unique: true,
+      default: function () {
+        return generateUniqueReferralCode() // A function that returns a unique referral code.
+      },
+    },
     promotion: {
       type: Boolean,
       default: false,
@@ -42,8 +50,8 @@ const userSchema = new Schema(
     picture: {},
     role: {
       type: [String],
-      default: ["Subscriber"],
-      enum: ["Subscriber", "Instructor", "Admin", "Pending"],
+      default: ['Subscriber'],
+      enum: ['Subscriber', 'Instructor', 'Admin', 'Pending'],
     },
     website: {
       type: String,
@@ -66,17 +74,27 @@ const userSchema = new Schema(
     teachingExperience: {
       type: String,
     },
+    shareRatio: {
+      directLink: {
+        us: { type: Number, default: 5 },
+        instructor: { type: Number, default: 95 },
+      },
+      websiteDiscover: {
+        us: { type: Number, default: 30 },
+        instructor: { type: Number, default: 70 },
+      },
+    },
 
-    stripe_account_id: "",
+    stripe_account_id: '',
     stripe_seller: {},
     stripeSession: {},
     passwordResetCode: {
       data: String,
-      default: "",
+      default: '',
     },
-    courses: [{ type: ObjectId, ref: "Course" }],
+    courses: [{ type: ObjectId, ref: 'Course' }],
   },
   { timestamps: true }
 )
 
-export default mongoose.model("User", userSchema)
+export default mongoose.model('User', userSchema)

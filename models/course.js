@@ -49,6 +49,10 @@ const lessonSchema = new Schema(
       type: String,
       lowercase: true,
     },
+    videoDuration: {
+      type: Number, // duration in seconds
+      default: 0,
+    },
     content: {
       type: {},
       minlength: 200,
@@ -155,6 +159,10 @@ const courseSchema = new Schema(
     published: {
       type: Boolean,
       default: false,
+    },
+    totalVideoDuration: {
+      type: Number, // total duration in seconds for all lessons combined
+      default: 0,
     },
 
     quizProgress: [studentProgressSchema],
