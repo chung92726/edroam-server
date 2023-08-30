@@ -1,4 +1,4 @@
-import mongoose from "mongoose"
+import mongoose from 'mongoose'
 const { Schema } = mongoose
 const { ObjectId } = mongoose.Schema
 
@@ -17,8 +17,8 @@ const userSchema = new Schema(
     },
     provider: {
       type: String,
-      enum: ["local", "facebook", "google", "apple"],
-      default: "local",
+      enum: ['local', 'facebook', 'google', 'apple'],
+      default: 'local',
     },
     providerId: { type: String, unique: true, sparse: true }, // Unique identifier from the OAuth2 provider
     tokenVersion: {
@@ -42,10 +42,28 @@ const userSchema = new Schema(
     picture: {},
     role: {
       type: [String],
-      default: ["Subscriber"],
-      enum: ["Subscriber", "Instructor", "Admin", "Pending"],
+      default: ['Subscriber'],
+      enum: ['Subscriber', 'Instructor', 'Admin', 'Pending'],
     },
     website: {
+      type: String,
+    },
+    youtube: {
+      type: String,
+    },
+    facebook: {
+      type: String,
+    },
+    instagram: {
+      type: String,
+    },
+    twitter: {
+      type: String,
+    },
+    wechat: {
+      type: String,
+    },
+    tiktok: {
       type: String,
     },
     biography: {
@@ -67,16 +85,16 @@ const userSchema = new Schema(
       type: String,
     },
 
-    stripe_account_id: "",
+    stripe_account_id: '',
     stripe_seller: {},
     stripeSession: {},
     passwordResetCode: {
       data: String,
-      default: "",
+      default: '',
     },
-    courses: [{ type: ObjectId, ref: "Course" }],
+    courses: [{ type: ObjectId, ref: 'Course' }],
   },
   { timestamps: true }
 )
 
-export default mongoose.model("User", userSchema)
+export default mongoose.model('User', userSchema)
