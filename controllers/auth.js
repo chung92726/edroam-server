@@ -7,7 +7,7 @@ import ShortUniqueId from 'short-unique-id'
 const awsConfig = {
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  region: process.env.AWS_REGION,
+  region: 'eu-north-1',
   apiVersion: process.env.AWS_API_VERSION,
 }
 
@@ -145,6 +145,7 @@ const sendResetEmail = async (email, shortCode, res) => {
     })
     .catch((err) => {
       console.log(err)
+      res.json({ ok: false })
     })
 }
 
@@ -246,7 +247,7 @@ export const loginWithFacebook = async (req, res) => {
     )
 
     // Encode the user data as a URI component
-    const userData = encodeURIComponent(JSON.stringify(req.user))
+    const userData = encodeURIComponent(JSON.stringify(user))
     res.cookie('token', token, {
       httpOnly: true,
     })
@@ -274,7 +275,7 @@ export const loginWithGoogle = async (req, res) => {
     )
 
     // Encode the user data as a URI component
-    const userData = encodeURIComponent(JSON.stringify(req.user))
+    const userData = encodeURIComponent(JSON.stringify(user))
     res.cookie('token', token, {
       httpOnly: true,
     })

@@ -1,6 +1,7 @@
-import User from "../models/user"
-import AWS from "aws-sdk"
-import { uploadImage, removeImage } from "./course.js"
+import User from '../models/user'
+import Course from '../models/course'
+import AWS from 'aws-sdk'
+import { uploadImage, removeImage } from './course.js'
 
 const awsConfig = {
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
@@ -17,6 +18,12 @@ export const instructorUpdated = async (req, res) => {
     const {
       name,
       website,
+      youtube,
+      facebook,
+      instagram,
+      twitter,
+      wechat,
+      tiktok,
       biography,
       picture,
       gender,
@@ -28,17 +35,18 @@ export const instructorUpdated = async (req, res) => {
 
     //validation
     if (
-      !picture ||
+      // !picture ||
       !name ||
-      !website ||
+      // !website ||
       !biography ||
-      !gender ||
-      !ageRange ||
+      // !gender ||
+      // !ageRange ||
       !phoneNumber ||
+      !biography ||
       !courseDetails ||
       !teachingExperience
     ) {
-      return res.status(400).send("Some fields are missing")
+      return res.status(400).send('Some fields are missing')
     }
 
     const updated = await User.findByIdAndUpdate(
@@ -46,6 +54,12 @@ export const instructorUpdated = async (req, res) => {
       {
         name,
         website,
+        youtube,
+        facebook,
+        instagram,
+        twitter,
+        wechat,
+        tiktok,
         biography,
         picture,
         gender,
@@ -56,14 +70,14 @@ export const instructorUpdated = async (req, res) => {
       },
       { new: true }
     )
-      .select("-password")
+      .select('-password')
       .exec()
     // console.log("updated: " + updated);
 
     return res.json(updated)
   } catch (err) {
     console.log(err)
-    return res.status(400).send("Error. Try again.")
+    return res.status(400).send('Error. Try again.')
   }
 }
 
@@ -73,6 +87,12 @@ export const update = async (req, res) => {
     const {
       name,
       website,
+      youtube,
+      facebook,
+      instagram,
+      twitter,
+      wechat,
+      tiktok,
       biography,
       picture,
       gender,
@@ -83,13 +103,19 @@ export const update = async (req, res) => {
     } = req.body
 
     //validation
-    if (!name) return res.status(400).send("Name is required")
+    if (!name) return res.status(400).send('Name is required')
 
     const updated = await User.findByIdAndUpdate(
       req.auth._id,
       {
         name,
         website,
+        youtube,
+        facebook,
+        instagram,
+        twitter,
+        wechat,
+        tiktok,
         biography,
         picture,
         gender,
@@ -100,13 +126,42 @@ export const update = async (req, res) => {
       },
       { new: true }
     )
-      .select("-password")
+      .select('-password')
       .exec()
     // console.log("updated: " + updated);
 
     return res.json(updated)
   } catch (err) {
     console.log(err)
-    return res.status(400).send("Error. Try again.")
+    return res.status(400).send('Error. Try again.')
+  }
+}
+
+export const getUserInfo = async (req, res) => {
+  try {
+    let courses = await Course.find({
+      instructor: req.params.userId,
+      published: true,
+    })
+      .sort({ createdAt: -1 })
+      .select(
+        '-lessons -EnrolledUser -TotalRevenue -quizNumber -quizProgress -detailDescription'
+      )
+      .populate('instructor', '-_id name')
+      .exec()
+
+    let user = await User.findById(req.params.userId)
+      .select(
+        '-_id role name email picture biography website youtube facebook instagram twitter wechat tiktok'
+      )
+      .exec()
+
+    // let user = userDocument.toObject() // Convert the Mongoose document to a plain JS object
+    // user.social = [{ type: 'website', link: user.website }]
+    // delete user.website
+    res.json({ user, courses })
+  } catch (err) {
+    console.log(err)
+    res.status(400).send('Get member failed. Try again.')
   }
 }

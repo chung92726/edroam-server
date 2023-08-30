@@ -56,6 +56,24 @@ const userSchema = new Schema(
     website: {
       type: String,
     },
+    youtube: {
+      type: String,
+    },
+    facebook: {
+      type: String,
+    },
+    instagram: {
+      type: String,
+    },
+    twitter: {
+      type: String,
+    },
+    wechat: {
+      type: String,
+    },
+    tiktok: {
+      type: String,
+    },
     biography: {
       type: String,
     },

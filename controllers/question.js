@@ -1,4 +1,7 @@
 import Question from '../models/question.js'
+import User from '../models/user.js'
+import Course from '../models/course.js'
+import { sendEmail } from '../services/emailService.js'
 
 export const getQuestion = async (req, res) => {
   try {
@@ -83,6 +86,16 @@ export const askQuestion = async (req, res) => {
       askedBy: req.auth._id,
       instructor: instructorId,
     })
+    const instructor = await User.findById(instructorId)
+    const course = await Course.findById(courseId)
+
+    await sendEmail(
+      instructor.email,
+      course.name,
+      lessonIndex,
+      'http://localhost:3000/instructor/allquestions'
+    )
+
     res.status(200).json(question)
   } catch (err) {
     console.error(err)
