@@ -8,6 +8,7 @@ import Completed from '../models/completed'
 import Enrolled from '../models/enrolled'
 import getSignedFileUrl from '../utils/signedUrl'
 import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3'
+import course from '../models/course'
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET)
 
@@ -98,7 +99,21 @@ export const create = async (req, res) => {
 }
 
 export const read = async (req, res) => {
-  console.log('course')
+  // console.log('course')
+  try {
+    const course = await Course.findOne({ slug: req.params.slug })
+      .select('-lessons.video.Location')
+      .populate('instructor', '_id name picture biography')
+      .exec()
+    res.json(course)
+  } catch (err) {
+    console.log(err)
+    return res.status(400).send('Error. Try again.')
+  }
+}
+
+export const instructorRead = async (req, res) => {
+  // console.log('course')
   try {
     const course = await Course.findOne({ slug: req.params.slug })
       .populate('instructor', '_id name picture biography')
@@ -173,24 +188,53 @@ export const addLesson = async (req, res) => {
     if (req.auth._id !== instructorId) {
       return res.status(400).send('Unauthorized')
     }
-    const updated = await Course.findOneAndUpdate(
-      { slug },
-      {
-        $push: {
-          lessons: {
-            title,
-            content,
-            video,
-            free_preview,
-            slug: slugify(title),
-            supplementary_resources,
-          },
-        },
-      },
-      { new: true }
-    )
+
+    const course = await Course.findOne({ slug })
+
+    const lesson = {
+      title,
+      content,
+      video,
+      free_preview,
+      slug: slugify(title),
+      supplementary_resources,
+    }
+
+    const shouldUpdateMainPreview =
+      video && Object.keys(video).length && free_preview && !course.mainPreview
+
+    const updateObj = {
+      $push: { lessons: lesson },
+    }
+
+    if (shouldUpdateMainPreview) {
+      updateObj.mainPreview = lesson
+    }
+
+    const updated = await Course.findOneAndUpdate({ slug }, updateObj, {
+      new: true,
+    })
       .populate('instructor', '_id name')
       .exec()
+
+    // const updated = await Course.findOneAndUpdate(
+    //   { slug },
+    //   {
+    //     $push: {
+    //       lessons: {
+    //         title,
+    //         content,
+    //         video,
+    //         free_preview,
+    //         slug: slugify(title),
+    //         supplementary_resources,
+    //       },
+    //     },
+    //   },
+    //   { new: true }
+    // )
+    //   .populate('instructor', '_id name')
+    //   .exec()
     res.json(updated)
   } catch (err) {
     console.log(err)
@@ -222,13 +266,27 @@ export const removeLesson = async (req, res) => {
   try {
     const { slug, lessonId } = req.params
     const course = await Course.findOne({ slug }).exec()
-    console.log(req.auth._id, course)
+    // console.log(req.auth._id, course)
     if (req.auth._id !== course.instructor._id.toString()) {
       return res.status(400).send('Unauthorized')
     }
-    const courseToUpdate = await Course.findByIdAndUpdate(course._id, {
-      $pull: { lessons: { _id: lessonId } },
-    }).exec()
+    const courseToUpdate = await Course.findByIdAndUpdate(
+      course._id,
+      {
+        $pull: { lessons: { _id: lessonId } },
+      },
+      { new: true }
+    ).exec()
+    if (
+      courseToUpdate.lessons.length <= 5 &&
+      courseToUpdate.published == true
+    ) {
+      const unpublish = await Course.findByIdAndUpdate(
+        { _id: course._id },
+        { published: false },
+        { new: true }
+      ).exec()
+    }
     res.json({ ok: true })
   } catch (err) {
     console.log(err)
@@ -239,10 +297,24 @@ export const removeLesson = async (req, res) => {
 export const updateLesson = async (req, res) => {
   try {
     const { slug, instructorId } = req.params
-    const course = await Course.findOne({ slug }).select('instructor').exec()
+    // const course = await Course.findOne({ slug }).select('instructor').exec()
+    const course = await Course.findOne(
+      {
+        slug: slug,
+        'lessons._id': req.body._id,
+      },
+      {
+        'lessons.$': 1,
+        instructor: 1,
+      }
+    )
+      .select('instructor lessons mainPreview')
+      .exec()
+
     if (req.auth._id !== course.instructor._id.toString()) {
       return res.status(400).send('Unauthorized')
     }
+
     const {
       title,
       content,
@@ -250,22 +322,42 @@ export const updateLesson = async (req, res) => {
       free_preview,
       _id,
       supplementary_resources,
+      mainPreview,
     } = req.body
-    const updated = await Course.updateOne(
-      { 'lessons._id': _id },
-      {
-        $set: {
-          'lessons.$.title': title,
-          'lessons.$.content': content,
-          'lessons.$.video': video,
-          'lessons.$.free_preview': free_preview,
-          'lessons.$.supplementary_resources': supplementary_resources,
-        },
+
+    const shouldUpdateMainPreview =
+      (video && Object.keys(video).length && free_preview && mainPreview) ||
+      (video &&
+        Object.keys(video).length &&
+        free_preview &&
+        !course.mainPreview)
+
+    const updateObj = {
+      $set: {
+        'lessons.$.title': title,
+        'lessons.$.content': content,
+        'lessons.$.video': video,
+        'lessons.$.free_preview': free_preview,
+        'lessons.$.supplementary_resources': supplementary_resources,
+        'lessons.$.slug': slugify(title),
       },
-      { new: true }
+    }
+
+    if (shouldUpdateMainPreview) {
+      updateObj.mainPreview = course.lessons[0]
+      // console.log(updateObj)
+    }
+
+    const updated = await Course.findOneAndUpdate(
+      { 'lessons._id': _id },
+      updateObj,
+      {
+        new: true,
+      }
     )
       .populate('instructor', '_id name')
       .exec()
+
     res.json(updated)
   } catch (err) {
     console.log(err)
@@ -610,11 +702,11 @@ export const getHistory = async (req, res) => {
 
 export const getSignedUrl = async (req, res) => {
   try {
-    console.log('start')
+    // console.log('start')
     const { filename } = req.body
-    console.log(filename)
+    // console.log(filename)
     const signedUrl = await getSignedFileUrl(filename)
-    console.log(signedUrl)
+    // console.log(signedUrl)
 
     res.json(signedUrl)
   } catch (err) {
@@ -745,5 +837,105 @@ export const getLessonByCourseId = async (req, res) => {
   } catch (err) {
     console.log(err)
     return res.status(400).send('Get lesson failed')
+  }
+}
+
+export const serchAndFilter = async (req, res) => {
+  try {
+    // Filters
+    const {
+      search,
+      category,
+      level,
+      language,
+      price,
+      sort,
+      page = 1,
+      limit = 10,
+    } = req.query
+
+    // Base query
+    let query = {
+      // 'category.value': { $regex: req.params.category, $options: 'i' },
+      published: true,
+    }
+
+    if (category) {
+      query['category.value'] = { $regex: category, $options: 'i' }
+    }
+
+    // Apply search filter
+    if (search) {
+      query.name = { $regex: search, $options: 'i' }
+    }
+
+    // Apply level filter
+    if (level) {
+      query.level = level
+    }
+
+    // Apply language filter
+    if (language) {
+      query.language = language
+    }
+
+    // Apply price filter
+    if (price) {
+      query.price = { $lte: price }
+    }
+
+    // Sorting
+    let sortQuery = {}
+    if (sort) {
+      if (sort === 'price') {
+        sortQuery.price = 1 // 1 for ascending, -1 for descending
+      } else if (sort === '-price') {
+        sortQuery.price = -1
+      } else if (sort === 'created') {
+        sortQuery.createdAt = 1
+      } else if (sort === '-created') {
+        sortQuery.createdAt = -1
+      } else if (sort === 'updated') {
+        sortQuery.updatedAt = 1
+      } else if (sort === '-updated') {
+        sortQuery.updatedAt = -1
+      }
+    }
+
+    // Pagination
+    const pageNum = parseInt(page)
+    const resultLimit = parseInt(limit)
+    const skipRecords = (pageNum - 1) * resultLimit
+
+    // Fetch the total count of documents matching the query
+    const totalCount = await Course.countDocuments(query)
+
+    const courses = await Course.find(query)
+      .select(
+        `-lessons.video -lessons.supplementary_resources -lessons.content -lessons.quiz
+        -EnrolledUser -TotalRevenue -quizProgress -quizNumber`
+      )
+      .populate('instructor', '_id name')
+      .sort(sortQuery)
+      .skip(skipRecords)
+      .limit(resultLimit)
+      .exec()
+
+    res.json({
+      conditions: {
+        query,
+        sort: sortQuery,
+        pagination: {
+          page: pageNum,
+          limit: resultLimit,
+        },
+      },
+      total: totalCount,
+      count: courses.length,
+      courses,
+    })
+  } catch (err) {
+    console.log(err)
+    return res.status(400).send('Error. Try again.')
   }
 }

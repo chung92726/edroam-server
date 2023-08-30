@@ -38,12 +38,15 @@ import {
   getS3File,
   category,
   getLessonByCourseId,
+  serchAndFilter,
+  instructorRead,
 } from '../controllers/course'
 
 const router = express.Router()
 
 router.get('/courses', courses)
-router.get('/courses/:category', category)
+// router.get('/courses/:category', category)
+router.get('/courses/search/', serchAndFilter)
 
 router.post('/course/upload-image', requireSignin, uploadImage)
 router.post('/course/remove-image', requireSignin, removeImage)
@@ -53,6 +56,13 @@ router.get('/check-enrollment/:courseId', requireSignin, checkEnrollment)
 //course
 router.post('/course', requireSignin, isInstructor, create)
 router.get('/course/:slug', read)
+router.get(
+  '/course/instuctor/:slug',
+  requireSignin,
+  isInstructor,
+  instructorRead
+)
+
 router.post(
   '/course/video-upload/:instructorId',
   requireSignin,

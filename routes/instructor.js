@@ -1,6 +1,6 @@
 import express from 'express'
 
-import { isInstructor, requireSignin, isSelf } from '../middlewares/index'
+import { isInstructor, requireSignin } from '../middlewares/index'
 import {
   makeInstructor,
   getAccountStatus,

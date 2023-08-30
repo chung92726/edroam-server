@@ -41,8 +41,8 @@ const lessonSchema = new Schema(
     title: {
       type: String,
       trim: true,
-      minlength: 3,
-      maxlength: 320,
+      minlength: 1,
+      maxlength: 80,
       required: true,
     },
     slug: {
@@ -51,7 +51,7 @@ const lessonSchema = new Schema(
     },
     content: {
       type: {},
-      minlength: 200,
+      // minlength: 200,
     },
     quiz: [{ type: ObjectId, ref: 'Quiz' }],
     video: {},
@@ -114,7 +114,7 @@ const courseSchema = new Schema(
       type: String,
       trim: true,
       minlength: 3,
-      maxlength: 320,
+      maxlength: 50,
       required: true,
     },
     numberOfReviews: {
@@ -130,8 +130,9 @@ const courseSchema = new Schema(
       lowercase: true,
     },
     description: {
-      type: {},
-      minlength: 200,
+      type: String,
+      // minlength: 100,
+      maxlength: 300,
       required: true,
     },
     detailDescription: { type: String },
@@ -155,6 +156,9 @@ const courseSchema = new Schema(
     published: {
       type: Boolean,
       default: false,
+    },
+    mainPreview: {
+      type: lessonSchema,
     },
 
     quizProgress: [studentProgressSchema],
