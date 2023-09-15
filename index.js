@@ -31,7 +31,11 @@ app.use(
 
 // connect do db
 mongoose
-  .connect(process.env.DATABASE)
+  .connect(process.env.DATABASE, {
+    authSource: 'admin',
+    user: process.env.DB_USER,
+    pass: process.env.DB_PASSWORD,
+  })
   //   {
   //   authSource: 'admin',
   //   user: 'Frankie',
