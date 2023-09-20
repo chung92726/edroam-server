@@ -84,6 +84,7 @@ export const create = async (req, res) => {
     const alreadyExist = await Course.findOne({
       slug: slugify(req.body.name.toLowerCase()),
     })
+    // console.log(req.body)
     if (alreadyExist) return res.status(400).send('Title is taken')
     const course = await new Course({
       slug: slugify(req.body.name),
@@ -103,7 +104,7 @@ export const read = async (req, res) => {
   try {
     const course = await Course.findOne({ slug: req.params.slug })
       .select('-lessons.video.Location')
-      .populate('instructor', '_id name picture biography')
+      .populate('instructor', '_id name picture biography referralCode')
       .exec()
     res.json(course)
   } catch (err) {
@@ -183,8 +184,14 @@ export const removeVideo = async (req, res) => {
 export const addLesson = async (req, res) => {
   try {
     const { slug, instructorId } = req.params
-    const { title, content, video, free_preview, supplementary_resources } =
-      req.body
+    const {
+      title,
+      content,
+      video,
+      free_preview,
+      supplementary_resources,
+      duration,
+    } = req.body
     if (req.auth._id !== instructorId) {
       return res.status(400).send('Unauthorized')
     }
@@ -196,6 +203,7 @@ export const addLesson = async (req, res) => {
       content,
       video,
       free_preview,
+      duration,
       slug: slugify(title),
       supplementary_resources,
     }
@@ -205,6 +213,7 @@ export const addLesson = async (req, res) => {
 
     const updateObj = {
       $push: { lessons: lesson },
+      $inc: { totalDuration: duration },
     }
 
     if (shouldUpdateMainPreview) {
@@ -270,10 +279,15 @@ export const removeLesson = async (req, res) => {
     if (req.auth._id !== course.instructor._id.toString()) {
       return res.status(400).send('Unauthorized')
     }
+    const lessonToRemove = course.lessons.find(
+      (lesson) => lesson._id.toString() === lessonId
+    )
+    const durationToSubtract = lessonToRemove ? lessonToRemove.duration : 0
     const courseToUpdate = await Course.findByIdAndUpdate(
       course._id,
       {
         $pull: { lessons: { _id: lessonId } },
+        $inc: { totalDuration: -durationToSubtract },
       },
       { new: true }
     ).exec()
@@ -314,6 +328,9 @@ export const updateLesson = async (req, res) => {
     if (req.auth._id !== course.instructor._id.toString()) {
       return res.status(400).send('Unauthorized')
     }
+    const oldDuration = course.lessons[0].duration
+    const newDuration = req.body.duration
+    const durationDifference = newDuration - oldDuration
 
     const {
       title,
@@ -337,10 +354,12 @@ export const updateLesson = async (req, res) => {
         'lessons.$.title': title,
         'lessons.$.content': content,
         'lessons.$.video': video,
+        'lessons.$.duration': newDuration,
         'lessons.$.free_preview': free_preview,
         'lessons.$.supplementary_resources': supplementary_resources,
         'lessons.$.slug': slugify(title),
       },
+      $inc: { totalDuration: durationDifference },
     }
 
     if (shouldUpdateMainPreview) {
@@ -487,14 +506,26 @@ export const freeEnrollment = async (req, res) => {
 export const paidEnrollment = async (req, res) => {
   try {
     const { courseId } = req.params
+    console.log(courseId)
+    const referral = req.referral
+    // console.log(referral.toString())
+
     const course = await Course.findById(courseId).populate('instructor').exec()
     if (!course.paid) {
       return res.status(400).send('Free course does not require payment')
     }
     // get user from db to get stripe session id
     const user = await User.findById(req.auth._id).exec()
+    let our_ratio = user.shareRatio.websiteDiscover.us
+
+    if (referral) {
+      if (referral.toString() == courseId) {
+        our_ratio = user.shareRatio.directLink.us
+      }
+    }
     // application fee 30% for platform and 70% for instructor
-    const fee = (course.price * 30) / 100
+    const fee = (course.price * our_ratio) / 100
+    console.log(fee)
     // create session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -504,7 +535,7 @@ export const paidEnrollment = async (req, res) => {
         {
           price_data: {
             unit_amount: Math.round(course.price.toFixed(2) * 100),
-            currency: 'usd',
+            currency: 'hkd',
             product_data: {
               name: course.name,
             },
@@ -700,14 +731,88 @@ export const getHistory = async (req, res) => {
   }
 }
 
+// export const getSignedUrl = async (req, res) => {
+//   try {
+//     // console.log('start')
+//     const { filename } = req.body
+//     console.log(filename)
+//     const signedUrl = await getSignedFileUrl(filename)
+//     console.log(signedUrl)
+
+//     res.json(signedUrl)
+//   } catch (err) {
+//     console.log(err)
+//     return res.status(400).send('Get signed url failed')
+//   }
+// }
+
+export const getSignedUrlForCourse = async (req, res) => {
+  try {
+    const { filename } = req.body
+
+    // Fetch the user by ID
+    const user = await User.findById(req.auth._id).exec()
+
+    // Check if the user exists
+    if (!user) {
+      return res.status(400).send('User not found')
+    }
+
+    // Find the course that has the video with the provided filename
+    const course = await Course.findOne({ 'lessons.video.Key': filename })
+
+    if (!course) {
+      return res.status(400).send('Course not found')
+    }
+
+    // Check if the user is the instructor of the course
+    if (course.instructor.toString() === req.auth._id.toString()) {
+      const signedUrl = await getSignedFileUrl(filename)
+      return res.json(signedUrl)
+    }
+
+    // If not the instructor, check if the user is enrolled in the course
+    const isEnrolled = user.courses.includes(course._id)
+
+    if (!isEnrolled) {
+      return res
+        .status(403)
+        .send('You are not enrolled in this course and are not the instructor')
+    }
+
+    // If everything is fine, proceed with generating the signed URL
+    const signedUrl = await getSignedFileUrl(filename)
+    res.json(signedUrl)
+  } catch (err) {
+    console.log(err)
+    return res.status(400).send('Get signed url for course failed')
+  }
+}
+
 export const getSignedUrl = async (req, res) => {
   try {
-    // console.log('start')
     const { filename } = req.body
-    // console.log(filename)
-    const signedUrl = await getSignedFileUrl(filename)
-    // console.log(signedUrl)
 
+    // Find the course that has the lesson with the provided filename
+    const course = await Course.findOne({
+      'lessons.video.Key': filename, // Assuming video is an object with a filename property
+    })
+
+    if (!course) {
+      return res.status(400).send('Lesson not found')
+    }
+
+    // Find the specific lesson within the course lessons
+    const lesson = course.lessons.find((l) => l.video.Key === filename)
+
+    if (!lesson.free_preview) {
+      return res
+        .status(403)
+        .send('Access denied. This lesson is not a free preview.')
+    }
+
+    // If everything is fine, proceed with generating the signed URL
+    const signedUrl = await getSignedFileUrl(filename)
     res.json(signedUrl)
   } catch (err) {
     console.log(err)

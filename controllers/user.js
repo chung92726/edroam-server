@@ -145,7 +145,7 @@ export const getUserInfo = async (req, res) => {
     })
       .sort({ createdAt: -1 })
       .select(
-        '-lessons -EnrolledUser -TotalRevenue -quizNumber -quizProgress -detailDescription'
+        '-lessons.video.Location -lessons.supplementary_resources -lessons.quiz -lessons.video.ServerSideEncryption -lessons.video.Bucket -lessons.video.ETag -EnrolledUser -TotalRevenue -quizNumber -quizProgress -detailDescription'
       )
       .populate('instructor', '-_id name')
       .exec()

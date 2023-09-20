@@ -2,6 +2,7 @@ import { expressjwt } from 'express-jwt'
 import User from '../models/user'
 import Course from '../models/course'
 import passport from '../passport'
+import Coupon from '../models/coupon'
 
 export const requireSignin = (req, res, next) => {
   if (req.cookies.token) {
@@ -90,4 +91,51 @@ export const isAdmin = async (req, res, next) => {
   } catch (err) {
     console.log(err)
   }
+}
+
+export const referralMiddleware = async (req, res, next) => {
+  if (req.query.ref) {
+    try {
+      const instructor = await User.findOne({ referralCode: req.query.ref })
+      if (instructor) {
+        req.referral = instructor._id // Store the instructor's ID in the request for later use.
+      }
+    } catch (error) {
+      console.error('Error processing referral:', error)
+    }
+  }
+  next()
+}
+
+export const courseReferralMiddleware = async (req, res, next) => {
+  if (req.query.cref) {
+    try {
+      const course = await Course.findOne({ referralCode: req.query.cref })
+
+      if (course) {
+        req.referral = course._id // Store the instructor's ID in the request for later use.
+      }
+    } catch (error) {
+      console.error('Error processing referral:', error)
+    }
+  }
+  next()
+}
+
+export const validCoupon = async (req, res, next) => {
+  const { code } = req.body
+  if (code) {
+    const coupon = await Coupon.findOne({ code })
+    if (!coupon) {
+      return res.status(400).send('Invalid coupon code.')
+    }
+    if (coupon.validTo < new Date() || coupon.validFrom > new Date()) {
+      return res.status(400).send('Coupon is expired or not yet valid.')
+    }
+    if (coupon.usageLimit !== null && coupon.timesUsed >= coupon.usageLimit) {
+      return res.status(400).send('Coupon usage limit exceeded.')
+    }
+    req.coupon = coupon
+  }
+  next()
 }

@@ -65,7 +65,7 @@ export const makeInstructor = async (req, res) => {
       const account = await stripe.accounts.create({
         type: 'express',
         email: user.email,
-        default_currency: 'USD',
+        // default_currency: 'USD',
       })
       console.log('ACCOUNT => ', account.id)
       user.stripe_account_id = account.id
@@ -269,5 +269,32 @@ export const getRevenue = async (req, res) => {
   } catch (err) {
     console.log(err)
     return res.status(400).send('Get Revenue Fail')
+  }
+}
+
+export const getReferalCode = async (req, res) => {
+  try {
+    const userId = req.params.userId
+    const referalCode = User.findById(userId).select('referalCode').exec()
+    return res.json({ referalCode })
+  } catch (err) {
+    console.log(err)
+    return res.status(400).send('Get Referal Code Fail')
+  }
+}
+
+export const instructorPublishedCourses = async (req, res) => {
+  try {
+    const courses = await Course.find({
+      instructor: req.auth._id,
+      published: true, // Only fetch courses where published is true
+    })
+      .sort({ createdAt: -1 })
+      .exec()
+
+    res.json(courses)
+  } catch (err) {
+    console.log(err)
+    res.status(500).json({ error: 'Failed to fetch published courses' })
   }
 }

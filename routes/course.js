@@ -6,6 +6,7 @@ import {
   isInstructor,
   isEnrolled,
   isVerifiedInstructor,
+  courseReferralMiddleware,
 } from '../middlewares/index'
 import {
   uploadImage,
@@ -40,6 +41,7 @@ import {
   getLessonByCourseId,
   serchAndFilter,
   instructorRead,
+  getSignedUrlForCourse,
 } from '../controllers/course'
 
 const router = express.Router()
@@ -109,7 +111,12 @@ router.put('/course/:slug/:lessonId', requireSignin, removeLesson)
 
 // enrollment
 router.post('/free-enrollment/:courseId', requireSignin, freeEnrollment)
-router.post('/paid-enrollment/:courseId', requireSignin, paidEnrollment)
+router.post(
+  '/paid-enrollment/:courseId',
+  requireSignin,
+  courseReferralMiddleware,
+  paidEnrollment
+)
 router.get('/stripe-success/:courseId', requireSignin, stripeSuccess)
 
 // get user course
@@ -130,6 +137,11 @@ router.post(
 )
 
 router.post('/course/get-signedurl', getSignedUrl)
+router.post(
+  '/course/get-course-signedurl',
+  requireSignin,
+  getSignedUrlForCourse
+)
 
 router.get('/user/enrollment-history', requireSignin, getHistory)
 

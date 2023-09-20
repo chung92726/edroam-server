@@ -1,7 +1,7 @@
 import mongoose from 'mongoose'
 const { Schema } = mongoose
 const { ObjectId } = mongoose.Schema
-
+import { generateUniqueReferralCode } from '../utils/referalCode.js'
 const supplementary_resourcesSchema = new Schema(
   {
     title: {
@@ -49,7 +49,7 @@ const lessonSchema = new Schema(
       type: String,
       lowercase: true,
     },
-    videoDuration: {
+    duration: {
       type: Number, // duration in seconds
       default: 0,
     },
@@ -99,6 +99,7 @@ const courseReview = new Schema(
       min: 0.5,
       max: 5,
     },
+
     review: {
       type: String,
 
@@ -129,6 +130,20 @@ const courseSchema = new Schema(
       type: Number,
       default: 0,
     },
+    whatYouWillLearn: [
+      {
+        type: String,
+        minlength: 1,
+        maxlength: 100,
+      },
+    ],
+    requirements: [
+      {
+        type: String,
+        minlength: 1,
+        maxlength: 100,
+      },
+    ],
     slug: {
       type: String,
       lowercase: true,
@@ -161,7 +176,7 @@ const courseSchema = new Schema(
       type: Boolean,
       default: false,
     },
-    totalVideoDuration: {
+    totalDuration: {
       type: Number, // total duration in seconds for all lessons combined
       default: 0,
     },
@@ -179,6 +194,13 @@ const courseSchema = new Schema(
       type: ObjectId,
       ref: 'User',
       required: true,
+    },
+    referralCode: {
+      type: String,
+      unique: true,
+      default: function () {
+        return generateUniqueReferralCode(20) // A function that returns a unique referral code.
+      },
     },
     lessons: [lessonSchema],
     TotalRevenue: {

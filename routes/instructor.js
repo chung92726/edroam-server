@@ -13,6 +13,8 @@ import {
   currentInstructorOrPending,
   getAllEnrolled,
   getRevenue,
+  getReferalCode,
+  instructorPublishedCourses,
 } from '../controllers/instructor'
 
 const router = express.Router()
@@ -21,6 +23,11 @@ router.post('/make-instructor', requireSignin, makeInstructor)
 router.post('/get-account-status', requireSignin, getAccountStatus)
 router.get('/current-instructor', requireSignin, currentInstructor)
 router.get('/instructor-courses', requireSignin, instructorCourses)
+router.get(
+  '/instructor-courses/published',
+  requireSignin,
+  instructorPublishedCourses
+)
 router.get('/instructor/balance', requireSignin, instructorBalance)
 router.get(
   '/instructor/payout-settings',
@@ -45,6 +52,12 @@ router.get(
   requireSignin,
   isInstructor,
   getRevenue
+)
+router.get(
+  '/instructor/referalcode/:userId',
+  requireSignin,
+  isInstructor,
+  getReferalCode
 )
 
 module.exports = router

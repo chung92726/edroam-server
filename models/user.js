@@ -94,8 +94,8 @@ const userSchema = new Schema(
     },
     shareRatio: {
       directLink: {
-        us: { type: Number, default: 5 },
-        instructor: { type: Number, default: 95 },
+        us: { type: Number, default: 10 },
+        instructor: { type: Number, default: 90 },
       },
       websiteDiscover: {
         us: { type: Number, default: 30 },
